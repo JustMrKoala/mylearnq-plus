@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 (31 oktober 2026)
+
+- Check-out heeft een eigen tabblad, met per dag hoeveel je van je taken hebt afgerond.
+- De vragen van de check-in staan weer in het formulier, ook als je vooruit plant (dan zijn ze niet verplicht).
+- Een blok kiezen is nu verplicht bij elke taak.
+- Nieuwe instelling onder Aanpassen: het 4e blok uitzetten, voor scholen met drie werkblokken per dag.
+
 ## 1.1.1 (31 oktober 2026)
 
 - Naam en beschrijving in het Nederlands en Engels, zodat de store beide talen herkent.

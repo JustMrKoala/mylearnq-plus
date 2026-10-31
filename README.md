@@ -18,7 +18,7 @@ Een onofficiële browserextensie die [MyLearnQ](https://app.mylearnq.com) een ni
 ## Functies van de extensie
 
 - **Nieuwe interface** voor Overzicht, Check-in, Challenges, Ideeën en Groei in beeld, gebouwd op de gegevens die de site zelf ook laadt.
-- **Check-in direct invullen:** taken plannen, je check-in invullen en een check-out doen kan helemaal in de nieuwe interface. De extensie gebruikt daarvoor dezelfde opslagacties als het formulier van MyLearnQ zelf. Challenges, ideeën en reflecties bewerk je in het originele formulier, geopend in een zijpaneel.
+- **Check-in en check-out direct invullen:** taken plannen, je check-in invullen en in een eigen tabblad een check-out doen kan helemaal in de nieuwe interface. Heeft je school maar drie werkblokken, zet dan het 4e blok uit onder Aanpassen. De extensie gebruikt daarvoor dezelfde opslagacties als het formulier van MyLearnQ zelf. Challenges, ideeën en reflecties bewerk je in het originele formulier, geopend in een zijpaneel.
 - **Aanpasbaar:** accentkleur, licht of donker thema, oppervlak, achtergrond, zijbalk of bovenbalk, dichtheid, afronding, lettertype, tekstgrootte, en welke dashboardblokken je ziet en in welke volgorde.
 - **Inspiratiesessies verbergen** voor scholen waar die niet van toepassing zijn.
 - **Klassieke weergave:** liever de originele site? Dan krijgt die alleen een nieuwe stijl.

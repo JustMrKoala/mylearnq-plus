@@ -162,6 +162,7 @@
     return {
       dashboard: ["checkin", "challenges", "growth"],
       checkin: ["checkin"],
+      checkout: ["checkin"],
       challenges: ["challenges", "checkin"],
       notes: ["notes"],
       growth: ["growth"]
@@ -266,6 +267,7 @@
   const NAV = [
     { id: "dashboard", label: "Overzicht", icon: "home" },
     { id: "checkin", label: "Check-in", icon: "calendar" },
+    { id: "checkout", label: "Check-out", icon: "clock" },
     { id: "challenges", label: "Challenges", icon: "target" },
     { id: "notes", label: "Ideeën", icon: "book" },
     { id: "growth", label: "Groei in beeld", icon: "trend" },
@@ -275,6 +277,7 @@
   const TITLES = {
     dashboard: () => [`Overzicht`, fmt(new Date(), { weekday: "long", day: "numeric", month: "long" })],
     checkin: () => ["Check-in", "Plan je dag en kijk terug op je week"],
+    checkout: () => ["Check-out", "Kijk aan het eind van de dag terug op je taken"],
     challenges: () => ["Challenges", "Al je projecten op één plek"],
     notes: () => ["Ideeën", "Verzamel inspiratie voor nieuwe challenges"],
     growth: () => ["Groei in beeld", "Jouw ontwikkeling in kernwaarden en werelden"],
@@ -396,6 +399,7 @@
     try {
       switch (S.view) {
         case "checkin": return checkinView();
+        case "checkout": return checkoutView();
         case "challenges": return S.ui.chDetail ? challengeDetail() : challengesView();
         case "notes": return notesView();
         case "growth": return growthView();
@@ -671,6 +675,49 @@
     return head + `<div class="week">${cols}</div>` + hist;
   }
 
+  /* ---------- Check-out ---------- */
+
+  const checkedOut = ci => has(ci.checkoutReflection) || (ci.items || []).some(it => it.actualProgress != null);
+
+  function checkoutView() {
+    const d = S.data.checkin;
+    if (d?._error) return errorCard(d._error);
+    const t = today();
+    const list = Object.values(checkInsByDate())
+      .filter(c => c.date <= t && c.status === "published")
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 10);
+    if (!list.length) {
+      return `<div class="card"><div class="empty" style="padding:70px 16px"><div class="big">${icon("clock", 26)}</div>
+        <h2 style="margin:0;color:var(--text);font-size:18px">Nog niets om af te sluiten</h2>
+        <p style="margin:0;max-width:360px">Heb je een check-in ingevuld? Dan kijk je hier aan het eind van de dag terug op wat je hebt gedaan.</p></div></div>`;
+    }
+    const open = list.find(c => !checkedOut(c));
+    const day = c => fmt(c.date, { weekday: "long", day: "numeric", month: "long" });
+    const hero = open
+      ? `<section class="card hero"><div><div class="eyebrow">${esc(day(open))}</div><h2>Hoe ging je dag?</h2>
+          <p>Geef per taak aan hoeveel je hebt afgerond en kijk even terug op je dag.</p>
+          <button class="btn primary" style="margin-top:14px" data-ciform="${open.date}" data-mode="checkout">${icon("check", 16)}Check-out invullen</button></div></section>`
+      : `<section class="card hero"><div><h2>Alles is afgesloten</h2><p>Je hebt voor al je recente check-ins een check-out gedaan.</p></div></section>`;
+
+    const cards = list.map(ci => {
+      const items = byBlock(ci.items || []);
+      const total = items.reduce((a, it) => a + (it.estimatedDuration || 0), 0);
+      const done = items.reduce((a, it) => a + Math.round((it.estimatedDuration || 0) * (it.actualProgress || 0) / 100), 0);
+      const finished = checkedOut(ci);
+      return `<section class="card co-card">
+        <div class="card-h"><h2 class="cap">${esc(day(ci))}</h2>
+          ${finished ? `<span class="pill ok">${icon("check", 12)}Afgesloten</span>` : `<span class="pill warn"><i class="dot"></i>Nog te doen</span>`}
+          <button class="btn sm ${finished ? "" : "primary"} more" data-ciform="${ci.date}" data-mode="checkout">${icon(finished ? "edit" : "check", 14)}${finished ? "Aanpassen" : "Check-out"}</button></div>
+        <div class="co-rows">${items.map(it => `<div class="co-row"><span class="blk">${it.blockNumber ?? "•"}</span><span class="d" title="${esc(it.description)}">${esc(it.description)}</span>
+          <div class="bar"><i style="width:${it.actualProgress || 0}%"></i></div><b>${it.actualProgress == null ? "open" : Math.round(it.actualProgress) + "%"}</b></div>`).join("")}</div>
+        <div class="ci-total" style="margin:10px 0 0">${finished ? `Afgerond: ${mins(done)} van ${mins(total)}` : `${mins(total)} gepland`}</div>
+        ${has(ci.checkoutReflection) ? `<p class="prose muted" style="margin:8px 0 0;font-size:13px">${esc(ci.checkoutReflection)}</p>` : ""}
+      </section>`;
+    }).join("");
+    return hero + `<div class="grid cols-auto">${cards}</div>`;
+  }
+
   function checkinDetail(date) {
     const ci = checkInsByDate()[date];
     if (!ci) return "";
@@ -788,6 +835,12 @@
     return { kind: kind || (chs.length ? "challenge" : "task"), challengeId: null, target: 0, block: null, description: "", duration: 0, editing: null };
   }
 
+  // Aantal werkblokken per dag volgens de school, zonder het 4e blok als dat in de instellingen uit staat
+  function blockCount() {
+    const n = S.data.checkin?.workBlocksPerDay || 4;
+    return S.settings.block4 ? n : Math.min(n, 3);
+  }
+
   function ciFormDrawer() {
     const f = S.ui.form;
     if (!f) return "";
@@ -810,14 +863,15 @@
     const fields = ciFields();
     const parts = fields.map(s => {
       if (s.fieldKey === "today_items") return itemsSection(f, f.mode === "plan" ? "Wat ga je doen?" : fieldLabel(s));
-      if (f.mode === "plan") return "";
       const k = camel(s.fieldKey);
       if (!(k in f.fields)) return "";
-      return `<div class="field"><label for="cif-${k}">${esc(fieldLabel(s))}${s.isRequired ? ` <span class="req">*</span>` : ""}</label>
+      // Bij plannen voor een latere dag mogen de vragen nog leeg blijven, net als op de site
+      const req = s.isRequired && f.mode !== "plan";
+      return `<div class="field"><label for="cif-${k}">${esc(fieldLabel(s))}${req ? ` <span class="req">*</span>` : ""}</label>
         <textarea id="cif-${k}" data-cif="${k}" rows="3">${esc(f.fields[k])}</textarea></div>`;
     });
     if (!fields.some(s => s.fieldKey === "today_items")) parts.push(itemsSection(f, "Wat ga je doen?"));
-    const intro = f.mode === "plan" ? `<p class="note" style="margin:0 0 16px">Plan alvast wat je deze dag gaat doen. De vragen vul je op de dag zelf in.</p>` : "";
+    const intro = f.mode === "plan" ? `<p class="note" style="margin:0 0 16px">Je plant vooruit. De taken zijn verplicht, de vragen mag je ook op de dag zelf invullen.</p>` : "";
     return intro + parts.join("");
   }
 
@@ -842,7 +896,7 @@
 
   function taskEditor(a) {
     const chs = plannable();
-    const blocks = S.data.checkin?.workBlocksPerDay || 4;
+    const blocks = blockCount();
     const sel = chs.find(c => c.challengeId === a.challengeId);
     const pp = sel && phaseProgress(sel);
     return `<div class="adder">
@@ -861,7 +915,7 @@
       <div class="sub-field"><label>Hoe lang ben je ermee bezig?</label>
         <div class="chips-row">${[15, 30, 45, 60, 90, 120].map(m => `<button class="chip-b ${a.duration === m ? "on" : ""}" data-cidur="${m}">${mins(m)}</button>`).join("")}
           <label class="mini-num"><input type="number" min="5" max="480" step="5" value="${a.duration || ""}" data-cia="duration" placeholder="anders">min</label></div></div>
-      <div class="sub-field"><label>In welk blok? <span class="faint">(niet verplicht)</span></label>
+      <div class="sub-field"><label>In welk blok?</label>
         <div class="chips-row">${Array.from({ length: blocks }, (_, i) => i + 1).map(b => `<button class="chip-b ${a.block === b ? "on" : ""}" data-ciblock="${b}">Blok ${b}</button>`).join("")}</div></div>
       <div class="btns">
         ${S.ui.form.items.length || a.editing ? `<button class="btn ghost" data-act="ciCancelAdd">Annuleren</button>` : ""}
@@ -900,6 +954,7 @@
     if (a.kind === "challenge" && !sel) return fail("Kies eerst een challenge.");
     if (!a.description.trim()) return fail("Schrijf op wat je gaat doen.");
     if (!(a.duration > 0)) return fail("Kies hoe lang je ermee bezig bent.");
+    if (!a.block || a.block > blockCount()) return fail("Kies in welk blok je dit doet.");
     const pp = sel && phaseProgress(sel);
     const item = {
       itemId: a.editing ?? Date.now(),
@@ -1499,6 +1554,10 @@
           <button class="btn ghost icon" data-wmove="${i}" data-dir="1" ${i === widgets.length - 1 ? "disabled" : ""} title="Omlaag">${icon("down", 15)}</button>
         </div>`).join("")}</div>
         ${sw("hideSessions", "Inspiratiesessies verbergen")}
+      </div>
+      <div class="set"><h3>Check-in</h3>
+        ${sw("block4", "4e blok gebruiken")}
+        <small class="muted" style="font-size:12px">Zet dit uit als jouw school maar drie werkblokken per dag heeft.</small>
       </div>
       <div class="set"><h3>Weergave</h3>
         ${seg("mode", [["rewrite", "Nieuwe UI"], ["classic", "Klassiek"], ["off", "Uit"]])}

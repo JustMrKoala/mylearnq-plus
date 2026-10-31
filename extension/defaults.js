@@ -21,6 +21,7 @@ const LQ_DEFAULTS = {
   glass: false,
   motion: true,
   hideSessions: true,
+  block4: true,         // 4e werkblok tonen bij het plannen van taken
   layout: "sidebar",    // sidebar | topbar
   sidebarCompact: false,
   density: "normal",    // cozy | normal | compact
