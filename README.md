@@ -2,6 +2,8 @@
 
 Een onofficiële browserextensie die [MyLearnQ](https://app.mylearnq.com) een nieuwe, rustige en volledig aanpasbare interface geeft, met een end-to-end versleutelde chat. In deze repository staat ook een kleine open source API-client voor dezelfde gegevens.
 
+![MyLearnQ+ overzicht](store/screenshots/1-overzicht.png)
+
 > **Let op:** dit project is niet gemaakt, gesteund of goedgekeurd door MyLearnQ of door een school. Het leest alleen je eigen gegevens uit, met de sessie waarmee je al bent ingelogd.
 
 ## Wat zit erin

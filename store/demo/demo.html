@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <title>MyLearnQ+ demo</title>
+  <style>html, body { margin: 0; background: #09090b; }</style>
+</head>
+<body>
+  <!-- Draait de echte extensiecode met verzonnen gegevens, voor storescreenshots -->
+  <script src="demo-data.js"></script>
+  <script src="../../extension/defaults.js"></script>
+  <script>
+    // app.js gebruikt LQChat als globale naam; de demo levert een nagebootste versie
+    var LQChat = window.LQChat;
+  </script>
+  <script src="../../extension/app.js"></script>
+  <script>
+    // ?click=<selector> klikt na het laden op een element, bijvoorbeeld een chatkamer
+    const sel = new URLSearchParams(location.search).get("click");
+    if (sel) setTimeout(() => document.getElementById("lq-host")?.shadowRoot.querySelector(sel)?.click(), 600);
+  </script>
+</body>
+</html>
