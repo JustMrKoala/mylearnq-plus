@@ -36,7 +36,8 @@ const LQ_DEFAULTS = {
   iconWeight: "normal", // thin | normal | bold
   bgBlur: 8,            // achtergrondafbeelding: vervagen in px
   bgDim: 55,            // achtergrondafbeelding: verduisteren in procenten
-  nickname: ""          // naam in de begroeting, leeg is je voornaam
+  nickname: "",         // naam in de begroeting, leeg is je voornaam
+  hideFooter: false     // klassieke weergave: de voettekst van de site verbergen
 };
 
 // Kant-en-klare looks: elke look zet een groep instellingen tegelijk

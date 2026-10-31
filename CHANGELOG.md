@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0 (31 oktober 2026)
+
+- De klassieke weergave heeft een eigen knop Instellingen linksonder, met hetzelfde paneel als de nieuwe UI.
+- In de klassieke weergave werken nu ook de looks, het verloop, alle achtergronden (ook je eigen foto), de kaartstijlen, de dikte van de iconen en de breedte van de inhoud.
+- Nieuw in de klassieke weergave: de voettekst verbergen en eigen CSS voor de originele site.
+- De knop Klassieke weergave is weg uit de zijbalk van de nieuwe UI. Wisselen kan via de extensie of onder Instellingen, Geavanceerd.
+- Wisselen tussen de weergaves vanuit de app werkt nu meteen.
+
 ## 1.3.0 (31 oktober 2026)
 
 - De knop Aanpassen heet nu Instellingen en staat linksonder in de zijbalk.

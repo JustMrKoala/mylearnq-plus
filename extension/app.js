@@ -217,7 +217,7 @@
     if (document.body) attach();
     else document.addEventListener("DOMContentLoaded", attach, { once: true });
     // Svelte kan de body opnieuw vullen; zorg dat we blijven bestaan
-    new MutationObserver(() => { if (S.settings.mode === "rewrite" && document.body && !host.isConnected) attach(); })
+    new MutationObserver(() => { if (/^(rewrite|classic)$/.test(S.settings.mode) && document.body && !host.isConnected) attach(); })
       .observe(document.documentElement, { childList: true, subtree: true });
   }
 
@@ -269,19 +269,20 @@
       grad: s.gradient ? "on" : "off", cards: s.cards, sideStyle: s.sideStyle, side: s.side
     });
     host.style.colorScheme = mode;
-    if (customStyle.textContent !== local.customCss) customStyle.textContent = local.customCss;
+    const css = S.panelOnly ? "" : local.customCss;
+    if (customStyle.textContent !== css) customStyle.textContent = css;
   }
 
   /* ---------- Eigen afbeelding en eigen CSS ---------- */
 
   // Te groot voor de sync opslag, dus deze staan in de lokale opslag van de extensie
-  const local = { bgImage: "", customCss: "" };
+  const local = { bgImage: "", customCss: "", classicCss: "" };
   const customStyle = document.createElement("style");
   shadow.append(customStyle);
 
   function saveLocal(patch) {
     Object.assign(local, patch);
-    chrome.storage.local.set({ lqBgImage: local.bgImage, lqCustomCss: local.customCss });
+    chrome.storage.local.set({ lqBgImage: local.bgImage, lqCustomCss: local.customCss, lqClassicCss: local.classicCss });
     render();
   }
 
@@ -352,6 +353,7 @@
 
   function render() {
     applyTheme();
+    if (S.panelOnly) { renderOverlay(); return; }
     if (S.error === "auth") { shellEl.innerHTML = authScreen(); overlayEl.innerHTML = ""; lastOverlay = null; hideSplash(); return; }
 
     const [title, sub] = (TITLES[S.view] || TITLES.dashboard)();
@@ -366,9 +368,7 @@
         </nav>
         <div class="side-foot nav">
           <button data-act="customize" title="Instellingen">${icon("sliders", 18)}<span>Instellingen</span></button>
-          ${S.settings.layout === "sidebar" ? `<button data-act="toggleCompact" title="Zijbalk in- of uitklappen">${icon("panel", 18)}<span>${S.settings.sidebarCompact ? "Uitklappen" : "Inklappen"}</span></button>` : ""}
-          <button data-act="classic" title="Naar de originele weergave">${icon("swap", 18)}<span>Klassieke weergave</span></button>
-        </div>
+          ${S.settings.layout === "sidebar" ? `<button data-act="toggleCompact" title="Zijbalk in- of uitklappen">${icon("panel", 18)}<span>${S.settings.sidebarCompact ? "Uitklappen" : "Inklappen"}</span></button>` : ""}        </div>
       </aside>`;
 
     const top = `
@@ -432,7 +432,7 @@
     if (!dr) return null;
     if (dr.type === "ci") return "ci:" + dr.date + ":" + !!S.data.checkin;
     if (dr.type === "ciForm") return "ciForm:" + S.ui.form?.v + ":" + !!S.data.checkin;
-    if (dr.type === "settings") return ["settings", S.ui.setTab, JSON.stringify(S.settings), local.bgImage.length, local.customCss.length].join(":");
+    if (dr.type === "settings") return ["settings", S.panelOnly, S.ui.setTab, JSON.stringify(S.settings), local.bgImage.length, local.customCss.length, local.classicCss.length].join(":");
     if (dr.type === "panel") return "panel:" + dr.route;
     if (dr.type === "chatInfo") return "chatInfo:" + dr.id + ":" + LQChat.messages(dr.id).length;
     if (dr.type === "chatJoin") return "chatJoin:" + (dr.error || "");
@@ -1584,10 +1584,15 @@
     ["looks", "Looks"], ["colors", "Kleuren"], ["background", "Achtergrond"], ["shape", "Vorm"],
     ["layout", "Indeling"], ["dashboard", "Dashboard"], ["advanced", "Geavanceerd"]
   ];
+  const SET_TABS_CLASSIC = [
+    ["looks", "Looks"], ["colors", "Kleuren"], ["background", "Achtergrond"], ["shape", "Vorm"],
+    ["page", "Pagina"], ["advanced", "Geavanceerd"]
+  ];
 
   function settingsDrawer() {
     const s = S.settings;
-    const tab = S.ui.setTab || "looks";
+    const tabList = S.panelOnly ? SET_TABS_CLASSIC : SET_TABS;
+    const tab = tabList.some(([id]) => id === S.ui.setTab) ? S.ui.setTab : "looks";
     const seg = (key, opts) => `<div class="seg full">${opts.map(([v, l]) => `<button data-set="${key}" data-val="${v}" class="${s[key] === v ? "active" : ""}">${l}</button>`).join("")}</div>`;
     const sw = (key, label) => `<label class="row"><span>${label}</span><span class="switch"><input type="checkbox" data-setb="${key}" ${s[key] ? "checked" : ""}><span></span></span></label>`;
     const sel = (key, label, opts) => `<label class="row"><span>${label}</span><select data-sets="${key}">${opts.map(([v, l]) => `<option value="${v}" ${String(s[key]) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>`;
@@ -1684,19 +1689,35 @@
           ${sw("block4", "4e blok gebruiken")}
           <small class="muted" style="font-size:12px">Zet dit uit als jouw school maar drie werkblokken per dag heeft.</small>
         </div>`,
-      advanced: () => `
+      page: () => `
+        <div class="set"><h3>Ruimte</h3>
+          <label class="row"><span>Breedte van de inhoud</span></label>
+          ${seg("width", [["narrow", "Smal"], ["normal", "Normaal"], ["wide", "Breed"], ["full", "Vol"]])}
+        </div>
+        <div class="set"><h3>Onderdelen</h3>
+          ${sw("hideSessions", "Inspiratiesessies verbergen")}
+          ${sw("hideFooter", "Voettekst onderaan verbergen")}
+        </div>`,
+      advanced: () => {
+        const css = S.panelOnly ? local.classicCss : local.customCss;
+        const hint = S.panelOnly
+          ? `Deze CSS geldt voor de originele site. Gebruik variabelen zoals <code>--lq-accent</code> en <code>--lq-radius</code>, of selectors als <code>header</code>, <code>main</code> en <code>main .bg-white</code>.`
+          : `Voor wie verder wil gaan: schrijf je eigen CSS. Gebruik variabelen zoals <code>--accent</code>, <code>--panel</code> en <code>--r</code>, of klassen als <code>.card</code>, <code>.side</code> en <code>.btn</code>.`;
+        const ph = S.panelOnly ? "header h1 { font-size: 26px; }&#10;main .bg-white { border-width: 2px; }" : ".card { border-width: 2px; }&#10;.hero h2 { font-size: 34px; }";
+        return `
         <div class="set"><h3>Eigen CSS</h3>
-          <p class="muted hint">Voor wie verder wil gaan: schrijf je eigen CSS. Gebruik variabelen zoals <code>--accent</code>, <code>--panel</code> en <code>--r</code>, of klassen als <code>.card</code>, <code>.side</code> en <code>.btn</code>.</p>
-          <textarea id="custom-css" class="code-in" rows="9" spellcheck="false" placeholder=".card { border-width: 2px; }&#10;.hero h2 { font-size: 34px; }">${esc(local.customCss)}</textarea>
-          <div style="display:flex;gap:8px"><button class="btn sm primary" data-act="applyCss">Toepassen</button>${local.customCss ? `<button class="btn sm ghost" data-act="clearCss">Leegmaken</button>` : ""}</div>
+          <p class="muted hint">${hint}</p>
+          <textarea id="custom-css" class="code-in" rows="9" spellcheck="false" placeholder="${ph}">${esc(css)}</textarea>
+          <div style="display:flex;gap:8px"><button class="btn sm primary" data-act="applyCss">Toepassen</button>${css ? `<button class="btn sm ghost" data-act="clearCss">Leegmaken</button>` : ""}</div>
         </div>
         <div class="set"><h3>Weergave</h3>
           ${seg("mode", [["rewrite", "Nieuwe UI"], ["classic", "Klassiek"], ["off", "Uit"]])}
           <button class="btn ghost" data-act="reset" style="align-self:flex-start">Alle instellingen terugzetten</button>
-        </div>`
+        </div>`;
+      }
     };
 
-    const body = `<div class="set-tabs">${SET_TABS.map(([id, l]) => `<button data-settab="${id}" class="${tab === id ? "active" : ""}">${l}</button>`).join("")}</div>
+    const body = `<div class="set-tabs">${tabList.map(([id, l]) => `<button data-settab="${id}" class="${tab === id ? "active" : ""}">${l}</button>`).join("")}</div>
       <div class="set-body">${tabs[tab]()}</div>`;
     return drawer("Instellingen", body);
   }
@@ -1706,7 +1727,7 @@
   function save(patch) {
     S.settings = { ...S.settings, ...patch };
     chrome.storage.sync.set(patch);
-    render();
+    if (!applyMode()) render();
   }
 
   function setView(v) {
@@ -1770,7 +1791,6 @@
       }
       case "toggleTheme": return save({ theme: isDark() ? "light" : "dark" });
       case "toggleCompact": return save({ sidebarCompact: !S.settings.sidebarCompact });
-      case "classic": return save({ mode: "classic" });
       case "refresh": refreshAll(); return toast("Vernieuwd");
       case "relogin": location.href = "/login"; return;
       case "chBack": S.ui.chDetail = null; return render();
@@ -1780,8 +1800,9 @@
       case "reset":
         if (!confirm("Alle instellingen terugzetten? Je eigen CSS wordt ook gewist.")) return;
         local.customCss = "";
+        local.classicCss = "";
         saveLocal({});
-        return save({ ...LQ_DEFAULTS, mode: "rewrite" });
+        return save({ ...LQ_DEFAULTS, mode: S.panelOnly ? "classic" : "rewrite" });
       case "copyStyle":
         navigator.clipboard.writeText(exportStyle()).then(() => toast("Code gekopieerd"), () => toast("Kopiëren lukte niet"));
         return;
@@ -1793,10 +1814,10 @@
         if (S.settings.background === "image") save({ background: "plain" });
         return saveLocal({});
       case "applyCss":
-        saveLocal({ customCss: (overlayEl.querySelector("#custom-css")?.value || "").slice(0, 20000) });
+        saveLocal({ [S.panelOnly ? "classicCss" : "customCss"]: (overlayEl.querySelector("#custom-css")?.value || "").slice(0, 20000) });
         return toast("CSS toegepast");
       case "clearCss":
-        saveLocal({ customCss: "" });
+        saveLocal({ [S.panelOnly ? "classicCss" : "customCss"]: "" });
         return toast("Eigen CSS gewist");
       case "ciAdd": S.ui.form.add = newTask(); return bumpForm();
       case "ciCancelAdd": S.ui.form.add = null; S.ui.form.error = ""; return bumpForm();
@@ -1898,7 +1919,41 @@
     return v || S.settings.startView || "dashboard";
   }
 
+  // Klassieke weergave: de originele site blijft zichtbaar, wij tonen alleen een
+  // instellingenknop met hetzelfde paneel als in de nieuwe UI
+  function setPanelOnly(on) {
+    S.panelOnly = on;
+    host.classList.toggle("panel-only", on);
+    app.classList.toggle("panel-only", on);
+  }
+
+  // Schakelt tussen nieuwe UI, klassieke weergave en uit, alleen als de modus echt verandert
+  let activeMode = null;
+  function applyMode() {
+    const m = S.settings.mode;
+    if (m === activeMode) return false;
+    activeMode = m;
+    if (m === "rewrite") {
+      setPanelOnly(false);
+      lastShell = "";
+      if (!S.uid) boot(); else { mount(); render(); }
+    } else if (m === "classic") {
+      if (S.ui.drawer?.type !== "settings") S.ui.drawer = null;
+      bootPanel();
+    } else host.remove();
+    return true;
+  }
+
+  function bootPanel() {
+    setPanelOnly(true);
+    lastShell = "";
+    shellEl.innerHTML = `<button class="fab" data-act="customize" title="MyLearnQ+ instellingen"><img src="${LOGO}" alt=""><span>Instellingen</span></button>`;
+    mount();
+    render();
+  }
+
   async function boot() {
+    setPanelOnly(false);
     mount();
     shellEl.innerHTML = `<div class="main" style="grid-column:1/-1"><div class="loader"><div class="spin"></div></div></div>`;
     applyTheme();
@@ -1923,22 +1978,18 @@
 
   chrome.storage.sync.get(LQ_DEFAULTS, stored => {
     S.settings = { ...LQ_DEFAULTS, ...stored };
-    chrome.storage.local.get({ lqBgImage: "", lqCustomCss: "" }, l => {
+    chrome.storage.local.get({ lqBgImage: "", lqCustomCss: "", lqClassicCss: "" }, l => {
       local.bgImage = l.lqBgImage || "";
       local.customCss = l.lqCustomCss || "";
-      if (S.settings.mode === "rewrite") boot();
+      local.classicCss = l.lqClassicCss || "";
+      applyMode();
     });
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
-    const was = S.settings.mode;
     for (const [k, { newValue }] of Object.entries(changes)) S.settings[k] = newValue;
-    if (changes.mode && was !== S.settings.mode) {
-      if (S.settings.mode === "rewrite") { if (!S.uid) boot(); else { mount(); render(); } }
-      else host.remove();
-      return;
-    }
-    if (S.settings.mode === "rewrite" && S.uid) render();
+    if (applyMode()) return;
+    if (S.panelOnly || (S.settings.mode === "rewrite" && S.uid)) render();
   });
 })();
