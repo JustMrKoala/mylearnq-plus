@@ -834,3 +834,112 @@ svg { flex: none; }
 .donut-row { display: block; }
 .only-mobile { display: none; }
 @media (max-width: 860px) { .only-mobile { display: inline-flex; } }
+
+/* ---------- Extra stijlopties ---------- */
+
+.view { max-width: var(--maxw, 1180px); }
+.app svg { stroke-width: var(--icon-w, 1.75); }
+.only-phone { display: none; }
+@media (max-width: 760px) { .only-phone { display: inline-flex; } }
+
+/* Verloop van accent naar tweede kleur */
+.app[data-grad="on"] { --accent-fill: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.app[data-grad="on"] .btn.primary,
+.app[data-grad="on"] .chip-b.on,
+.app[data-grad="on"] .nav .badge.hot,
+.app[data-grad="on"] .steps-n li::before,
+.app[data-grad="on"] .done-mark { background: var(--accent-fill); border-color: transparent; }
+.app[data-grad="on"] .btn.primary:hover { filter: brightness(1.08); background: var(--accent-fill); }
+.app[data-grad="on"] .bar > i { background: var(--accent-fill); }
+.app[data-grad="on"] .brand b,
+.app[data-grad="on"] .hero h2 { background: var(--accent-fill); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.app[data-grad="on"] .nav button.active { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* Achtergronden */
+.app[data-bg="gradient"]::before {
+  background:
+    radial-gradient(60% 50% at 0% 0%, color-mix(in oklab, var(--accent) 28%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 100% 100%, color-mix(in oklab, var(--accent-2) 24%, transparent), transparent 70%);
+}
+.app[data-bg="aurora"]::before {
+  inset: -20%;
+  background:
+    radial-gradient(35% 30% at 20% 20%, color-mix(in oklab, var(--accent) 35%, transparent), transparent 70%),
+    radial-gradient(30% 35% at 80% 30%, color-mix(in oklab, var(--accent-2) 30%, transparent), transparent 70%),
+    radial-gradient(40% 30% at 50% 90%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%);
+  filter: blur(30px);
+  animation: aurora 24s ease-in-out infinite alternate;
+}
+.app[data-motion="off"]::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .app::before { animation: none !important; } }
+@keyframes aurora {
+  50% { transform: translate(4%, -3%) rotate(6deg) scale(1.05); }
+  to { transform: translate(-3%, 4%) rotate(-4deg); }
+}
+.app[data-bg="image"]::before {
+  inset: calc(var(--bg-blur) * -2);
+  background:
+    linear-gradient(color-mix(in oklab, var(--bg) var(--bg-dim), transparent), color-mix(in oklab, var(--bg) var(--bg-dim), transparent)),
+    var(--bg-img) center / cover no-repeat;
+  filter: blur(var(--bg-blur));
+}
+/* Bij een sfeerachtergrond laten de balken de achtergrond doorschemeren */
+.app:is([data-bg="gradient"], [data-bg="aurora"], [data-bg="image"]) .side { background: color-mix(in oklab, var(--bg-2) 72%, transparent); }
+.app:is([data-bg="gradient"], [data-bg="aurora"], [data-bg="image"]) .top { background: transparent; }
+
+.app[data-glass="on"] .card.hero { background: none; backdrop-filter: none; }
+
+/* Kaartstijlen */
+.app[data-cards="float"] .card:not(.hero) { border-color: transparent; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 10px 30px -12px rgb(0 0 0 / 0.35); }
+.app[data-cards="flat"] .card:not(.hero) { border-color: transparent; background: var(--panel-2); }
+.app[data-cards="outline"] .card:not(.hero) { background: transparent; border-width: 1.5px; border-color: color-mix(in oklab, var(--text) 22%, var(--line)); }
+
+/* Stijl en plek van de zijbalk */
+.app[data-side-style="tinted"] .side { background: color-mix(in oklab, var(--accent) 13%, var(--bg-2)); }
+.app[data-side-style="tinted"] .nav button.active { background: color-mix(in oklab, var(--accent) 22%, var(--panel)); }
+.app[data-side-style="blend"] .side { background: transparent; border-color: transparent; }
+.app[data-side-style="blend"] .top { border-color: transparent; }
+@media (min-width: 761px) {
+  .app[data-layout="sidebar"][data-side="right"] { grid-template-columns: 1fr auto; }
+  .app[data-layout="sidebar"][data-side="right"] .side { order: 2; border-right: 0; border-left: 1px solid var(--line); }
+}
+
+/* Instellingenpaneel */
+.drawer:has(.set-tabs) { width: min(500px, 100%); }
+.set-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: -4px 0 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.set-tabs button { height: 28px; padding: 0 11px; border: 1px solid var(--line); border-radius: 99px; background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 550; }
+.set-tabs button:hover { color: var(--text); }
+.set-tabs button.active { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.hint { margin: 0; font-size: 12.5px; }
+.hint code, .set code { font-family: "Cascadia Code", Consolas, monospace; font-size: 11.5px; padding: 1px 4px; border-radius: 3px; background: var(--panel-2); }
+.looks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.look { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; font-size: 12px; font-weight: 550; color: var(--muted); }
+.look:hover { color: var(--text); }
+.look i { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 8px; border: 1px solid var(--line); background: var(--base); overflow: hidden; }
+.look i b { position: absolute; display: block; border-radius: calc(var(--r) / 2); }
+.look i b:nth-child(1) { inset: 14% 54% 14% 10%; background: color-mix(in oklab, var(--base) 85%, #888); }
+.look i b:nth-child(2) { inset: 14% 10% 50% 52%; background: linear-gradient(135deg, var(--a), var(--b)); }
+.look i b:nth-child(3) { inset: 58% 10% 14% 52%; background: color-mix(in oklab, var(--base) 85%, #888); }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tile { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; font-size: 12px; font-weight: 550; color: var(--muted); }
+.tile i { display: block; height: 54px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); background-size: cover; }
+.tile.on { color: var(--text); }
+.tile.on i { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent); }
+.t-background-grid i { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 10px 10px; background-repeat: repeat; }
+.t-background-dots i { background-image: radial-gradient(var(--muted) 1px, transparent 1.4px); background-size: 8px 8px; background-repeat: repeat; }
+.t-background-gradient i { background: radial-gradient(80% 80% at 0% 0%, color-mix(in oklab, var(--accent) 45%, transparent), transparent), radial-gradient(80% 80% at 100% 100%, color-mix(in oklab, var(--accent-2) 40%, transparent), transparent), var(--bg); }
+.t-background-aurora i { background: radial-gradient(40% 50% at 25% 40%, color-mix(in oklab, var(--accent) 60%, transparent), transparent), radial-gradient(40% 50% at 75% 60%, color-mix(in oklab, var(--accent-2) 55%, transparent), transparent), var(--bg); }
+.t-background-image i { background: var(--bg-img, none) center / cover, linear-gradient(135deg, var(--panel-2), var(--line)); }
+.tiles:has(.t-cards-default) { grid-template-columns: repeat(4, 1fr); }
+.t-cards-default i, .t-cards-float i, .t-cards-flat i, .t-cards-outline i { position: relative; background: var(--bg); }
+.t-cards-default i::after, .t-cards-float i::after, .t-cards-flat i::after, .t-cards-outline i::after { content: ""; position: absolute; inset: 12px 14px; border-radius: 5px; }
+.t-cards-default i::after { background: var(--panel); border: 1px solid var(--line); }
+.t-cards-float i::after { background: var(--panel); box-shadow: 0 6px 14px -4px rgb(0 0 0 / 0.45); }
+.t-cards-flat i::after { background: var(--panel-2); }
+.t-cards-outline i::after { border: 1.5px solid color-mix(in oklab, var(--text) 30%, var(--line)); }
+.grad-preview { height: 10px; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.bg-thumb { height: 110px; border-radius: var(--r-sm); border: 1px solid var(--line); background-size: cover; background-position: center; }
+.mini-in { width: 150px; padding: 5px 8px; border-radius: var(--r-xs); border: 1px solid var(--line); background: var(--panel); outline: 0; }
+.mini-in:focus, .code-in:focus { border-color: var(--accent); }
+.code-in { width: 100%; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--bg); font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; resize: vertical; outline: 0; }
+label.btn { cursor: pointer; }

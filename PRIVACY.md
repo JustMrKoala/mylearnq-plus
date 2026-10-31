@@ -15,6 +15,7 @@ Deze gegevens worden alleen in je browser getoond. Ze worden niet naar de maker 
 In de opslag van je browser:
 
 - Je instellingen (kleuren, lay-out en dergelijke), via de synchronisatie van je browser.
+- Als je die kiest: je eigen achtergrondfoto en eigen CSS, alleen op deze computer. Ze worden nergens heen gestuurd.
 - Voor de chat: de codes van je groepen, een sleutelpaar dat op dit apparaat is aangemaakt, en je berichtgeschiedenis in versleutelde vorm.
 
 ## Wat de extensie verstuurt

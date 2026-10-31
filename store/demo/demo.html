@@ -15,9 +15,10 @@
   </script>
   <script src="../../extension/app.js"></script>
   <script>
-    // ?click=<selector> klikt na het laden op een element, bijvoorbeeld een chatkamer
-    const sel = new URLSearchParams(location.search).get("click");
-    if (sel) setTimeout(() => document.getElementById("lq-host")?.shadowRoot.querySelector(sel)?.click(), 600);
+    // ?click=<selector> klikt na het laden op een element, bijvoorbeeld een chatgroep.
+    // Meerdere klikken na elkaar scheid je met ||
+    const sels = (new URLSearchParams(location.search).get("click") || "").split("||").filter(Boolean);
+    sels.forEach((sel, i) => setTimeout(() => document.getElementById("lq-host")?.shadowRoot.querySelector(sel)?.click(), 600 + i * 400));
   </script>
 </body>
 </html>

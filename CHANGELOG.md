@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0 (31 oktober 2026)
+
+- De knop Aanpassen heet nu Instellingen en staat linksonder in de zijbalk.
+- Instellingen opnieuw ingedeeld in tabbladen: Looks, Kleuren, Achtergrond, Vorm, Indeling, Dashboard en Geavanceerd.
+- Acht kant-en-klare looks, zoals Neon, Oceaan, Pastel, Papier en Terminal.
+- Nieuwe achtergronden: verloop, aurora en je eigen foto (met vervagen en verduisteren).
+- Verloop van twee kleuren voor knoppen, balken en de begroeting.
+- Kaartstijlen (standaard, zwevend, vlak, omlijnd), drie nieuwe lettertypes en de dikte van de iconen.
+- Zijbalk links of rechts, gekleurd of doorzichtig, en de breedte van de inhoud.
+- Een eigen naam in de begroeting.
+- Je look delen met een code, en eigen CSS voor wie nog verder wil.
+
 ## 1.2.0 (31 oktober 2026)
 
 - Check-out heeft een eigen tabblad, met per dag hoeveel je van je taken hebt afgerond.

@@ -249,17 +249,80 @@
     const vars = {
       "--bg": p[0], "--bg-2": p[1], "--panel": p[2], "--panel-2": p[3], "--line": p[4],
       "--text": p[5], "--muted": p[6], "--faint": p[7],
-      "--accent": s.accent, "--on-accent": onAccent(s.accent),
+      "--accent": s.accent, "--on-accent": onAccent(s.accent), "--accent-2": s.accent2,
       "--r": s.radius + "px",
       "--font": LQ_FONTS[s.font] || LQ_FONTS.modern,
-      "--scale": s.scale / 100
+      "--scale": s.scale / 100,
+      "--icon-w": { thin: 1.25, normal: 1.75, bold: 2.3 }[s.iconWeight] || 1.75,
+      "--maxw": { narrow: "900px", normal: "1180px", wide: "1500px", full: "none" }[s.width] || "1180px",
+      "--bg-blur": s.bgBlur + "px",
+      "--bg-dim": s.bgDim + "%"
     };
     for (const [k, v] of Object.entries(vars)) host.style.setProperty(k, v);
+    // De afbeelding is groot, dus alleen zetten als hij echt verandert
+    const img = local.bgImage ? `url("${local.bgImage}")` : "none";
+    if (applyTheme.img !== img) { host.style.setProperty("--bg-img", img); applyTheme.img = img; }
+    const bg = s.background === "image" && !local.bgImage ? "plain" : s.background;
     Object.assign(app.dataset, {
-      theme: mode, bg: s.background, glass: s.glass ? "on" : "off", motion: s.motion ? "on" : "off",
-      layout: s.layout, compact: s.sidebarCompact ? "on" : "off", density: s.density
+      theme: mode, bg, glass: s.glass ? "on" : "off", motion: s.motion ? "on" : "off",
+      layout: s.layout, compact: s.sidebarCompact ? "on" : "off", density: s.density,
+      grad: s.gradient ? "on" : "off", cards: s.cards, sideStyle: s.sideStyle, side: s.side
     });
     host.style.colorScheme = mode;
+    if (customStyle.textContent !== local.customCss) customStyle.textContent = local.customCss;
+  }
+
+  /* ---------- Eigen afbeelding en eigen CSS ---------- */
+
+  // Te groot voor de sync opslag, dus deze staan in de lokale opslag van de extensie
+  const local = { bgImage: "", customCss: "" };
+  const customStyle = document.createElement("style");
+  shadow.append(customStyle);
+
+  function saveLocal(patch) {
+    Object.assign(local, patch);
+    chrome.storage.local.set({ lqBgImage: local.bgImage, lqCustomCss: local.customCss });
+    render();
+  }
+
+  // Verkleint een gekozen foto tot hoogstens 1920 pixels breed, zodat de opslag klein blijft
+  function readImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => {
+        const k = Math.min(1, 1920 / im.width);
+        const c = document.createElement("canvas");
+        c.width = Math.round(im.width * k);
+        c.height = Math.round(im.height * k);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL("image/jpeg", 0.82));
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Dit bestand is geen afbeelding.")); };
+      im.src = url;
+    });
+  }
+
+  // Een look delen: alle stijlinstellingen als korte tekstcode
+  const STYLE_KEYS = ["accent", "accent2", "gradient", "theme", "surface", "background", "glass", "motion", "layout", "sidebarCompact",
+    "density", "radius", "font", "scale", "cards", "sideStyle", "side", "width", "iconWeight", "bgBlur", "bgDim"];
+  function exportStyle() {
+    const o = {};
+    for (const k of STYLE_KEYS) o[k] = S.settings[k];
+    if (local.customCss) o.css = local.customCss;
+    return "LQ+" + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  }
+  function importStyle(code) {
+    const raw = String(code || "").trim().replace(/^LQ\+/, "");
+    let o;
+    try { o = JSON.parse(decodeURIComponent(escape(atob(raw)))); } catch (e) { throw new Error("Deze code klopt niet."); }
+    const patch = {};
+    for (const k of STYLE_KEYS) if (k in o && typeof o[k] === typeof LQ_DEFAULTS[k]) patch[k] = o[k];
+    if (!Object.keys(patch).length) throw new Error("Deze code bevat geen instellingen.");
+    if (typeof o.css === "string") Object.assign(local, { customCss: o.css.slice(0, 20000) });
+    chrome.storage.local.set({ lqCustomCss: local.customCss });
+    save(patch);
   }
 
   /* ---------- Rendering ---------- */
@@ -302,6 +365,7 @@
           ${NAV.map(n => `${n.group ? `<div class="nav-label">${n.group}</div>` : ""}<button data-nav="${n.id}" class="${S.view === n.id ? "active" : ""}" title="${n.label}">${icon(n.icon, 18)}<span>${n.label}</span>${navBadge(n.id, activeCount)}</button>`).join("")}
         </nav>
         <div class="side-foot nav">
+          <button data-act="customize" title="Instellingen">${icon("sliders", 18)}<span>Instellingen</span></button>
           ${S.settings.layout === "sidebar" ? `<button data-act="toggleCompact" title="Zijbalk in- of uitklappen">${icon("panel", 18)}<span>${S.settings.sidebarCompact ? "Uitklappen" : "Inklappen"}</span></button>` : ""}
           <button data-act="classic" title="Naar de originele weergave">${icon("swap", 18)}<span>Klassieke weergave</span></button>
         </div>
@@ -313,7 +377,7 @@
         <div class="actions">
           <button class="btn ghost icon" data-act="refresh" title="Vernieuwen">${icon("refresh")}</button>
           <button class="btn ghost icon" data-act="toggleTheme" title="Licht of donker">${icon(isDark() ? "sun" : "moon")}</button>
-          <button class="btn" data-act="customize">${icon("sliders", 16)}<span>Aanpassen</span></button>
+          <button class="btn ghost icon only-phone" data-act="customize" title="Instellingen">${icon("sliders")}</button>
           <div class="avatar" title="${esc(S.user?.name || "")}">${esc(initials(S.user?.name))}</div>
         </div>
       </header>`;
@@ -368,7 +432,7 @@
     if (!dr) return null;
     if (dr.type === "ci") return "ci:" + dr.date + ":" + !!S.data.checkin;
     if (dr.type === "ciForm") return "ciForm:" + S.ui.form?.v + ":" + !!S.data.checkin;
-    if (dr.type === "settings") return "settings:" + JSON.stringify(S.settings);
+    if (dr.type === "settings") return ["settings", S.ui.setTab, JSON.stringify(S.settings), local.bgImage.length, local.customCss.length].join(":");
     if (dr.type === "panel") return "panel:" + dr.route;
     if (dr.type === "chatInfo") return "chatInfo:" + dr.id + ":" + LQChat.messages(dr.id).length;
     if (dr.type === "chatJoin") return "chatJoin:" + (dr.error || "");
@@ -478,7 +542,7 @@
   /* ---------- Overzicht ---------- */
 
   function dashboardView() {
-    const name = firstName(S.user?.name);
+    const name = S.settings.nickname.trim() || firstName(S.user?.name);
     const h = new Date().getHours();
     const greet = h < 6 ? "Goedenacht" : h < 12 ? "Goedemorgen" : h < 18 ? "Goedemiddag" : "Goedenavond";
     const chs = S.data.challenges?.challenges || [];
@@ -1516,54 +1580,125 @@
 
   const PANEL_TITLES = { checkin: "Check-in", challenges: "Challenges", notes: "Ideeën", growth: "Groei in beeld" };
 
+  const SET_TABS = [
+    ["looks", "Looks"], ["colors", "Kleuren"], ["background", "Achtergrond"], ["shape", "Vorm"],
+    ["layout", "Indeling"], ["dashboard", "Dashboard"], ["advanced", "Geavanceerd"]
+  ];
+
   function settingsDrawer() {
     const s = S.settings;
+    const tab = S.ui.setTab || "looks";
     const seg = (key, opts) => `<div class="seg full">${opts.map(([v, l]) => `<button data-set="${key}" data-val="${v}" class="${s[key] === v ? "active" : ""}">${l}</button>`).join("")}</div>`;
     const sw = (key, label) => `<label class="row"><span>${label}</span><span class="switch"><input type="checkbox" data-setb="${key}" ${s[key] ? "checked" : ""}><span></span></span></label>`;
     const sel = (key, label, opts) => `<label class="row"><span>${label}</span><select data-sets="${key}">${opts.map(([v, l]) => `<option value="${v}" ${String(s[key]) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>`;
-    const widgets = normalizedWidgets();
+    const range = (key, label, min, max, step, unit) => `<label class="row"><span>${label} <span class="muted">${s[key]}${unit}</span></span><input type="range" min="${min}" max="${max}" step="${step}" data-setr="${key}" value="${s[key]}"></label>`;
+    const tiles = (key, opts) => `<div class="tiles">${opts.map(([v, l]) => `<button class="tile t-${key}-${v} ${s[key] === v ? "on" : ""}" data-set="${key}" data-val="${v}"><i></i><span>${l}</span></button>`).join("")}</div>`;
 
-    const body = `
-      <div class="set"><h3>Kleur</h3>
-        <div class="swatches">${LQ_PRESETS.map(p => `<button class="swatch ${p.accent.toLowerCase() === s.accent.toLowerCase() ? "active" : ""}" style="--c:${p.accent}" title="${p.name}" data-set="accent" data-val="${p.accent}"></button>`).join("")}</div>
-        <label class="row"><span>Eigen kleur</span><input type="color" data-setc="accent" value="${esc(s.accent)}"></label>
-      </div>
-      <div class="set"><h3>Thema</h3>
-        ${seg("theme", [["site", "Auto"], ["light", "Licht"], ["dark", "Donker"]])}
-        ${sel("surface", "Oppervlak", [["zinc", "Neutraal"], ["midnight", "Middernacht"], ["stone", "Warm"], ["tinted", "Getint met accent"]])}
-        ${sel("background", "Achtergrond", [["plain", "Effen"], ["grid", "Raster"], ["dots", "Stippen"]])}
-        ${sw("glass", "Glaseffect")}
-        ${sw("motion", "Animaties")}
-      </div>
-      <div class="set"><h3>Lay-out</h3>
-        ${seg("layout", [["sidebar", "Zijbalk"], ["topbar", "Bovenbalk"]])}
-        ${s.layout === "sidebar" ? sw("sidebarCompact", "Compacte zijbalk") : ""}
-        ${seg("density", [["cozy", "Ruim"], ["normal", "Normaal"], ["compact", "Compact"]])}
-        ${sel("startView", "Startpagina", NAV.map(n => [n.id, n.label]))}
-      </div>
-      <div class="set"><h3>Vorm en tekst</h3>
-        <label class="row"><span>Afronding <span class="muted">${s.radius}px</span></span><input type="range" min="0" max="30" data-setr="radius" value="${s.radius}"></label>
-        <label class="row"><span>Tekstgrootte <span class="muted">${s.scale}%</span></span><input type="range" min="85" max="125" step="5" data-setr="scale" value="${s.scale}"></label>
-        ${sel("font", "Lettertype", [["modern", "Modern"], ["rounded", "Rond"], ["serif", "Klassiek"], ["mono", "Code"]])}
-      </div>
-      <div class="set"><h3>Dashboard</h3>
-        <div class="wl">${widgets.map((w, i) => `<div>
-          <span class="switch"><input type="checkbox" data-widget="${w.id}" ${w.on ? "checked" : ""}><span></span></span>
-          <span>${esc(LQ_WIDGETS.find(x => x.id === w.id).name)}</span>
-          <button class="btn ghost icon" data-wmove="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} title="Omhoog">${icon("up", 15)}</button>
-          <button class="btn ghost icon" data-wmove="${i}" data-dir="1" ${i === widgets.length - 1 ? "disabled" : ""} title="Omlaag">${icon("down", 15)}</button>
-        </div>`).join("")}</div>
-        ${sw("hideSessions", "Inspiratiesessies verbergen")}
-      </div>
-      <div class="set"><h3>Check-in</h3>
-        ${sw("block4", "4e blok gebruiken")}
-        <small class="muted" style="font-size:12px">Zet dit uit als jouw school maar drie werkblokken per dag heeft.</small>
-      </div>
-      <div class="set"><h3>Weergave</h3>
-        ${seg("mode", [["rewrite", "Nieuwe UI"], ["classic", "Klassiek"], ["off", "Uit"]])}
-        <button class="btn ghost" data-act="reset">Alles terugzetten</button>
-      </div>`;
-    return drawer("Aanpassen", body);
+    const tabs = {
+      looks: () => `
+        <div class="set"><h3>Kies een look</h3>
+          <p class="muted hint">Een look zet kleuren, achtergrond, vorm en lettertype in één keer. Daarna kun je alles nog los aanpassen.</p>
+          <div class="looks">${LQ_LOOKS.map((l, i) => {
+            const dark = l.set.theme === "dark";
+            const b = l.set.gradient ? l.set.accent2 : l.set.accent;
+            return `<button class="look" data-look="${i}" style="--a:${l.set.accent};--b:${b};--base:${dark ? "#111318" : "#f4f4f5"};--r:${Math.min(l.set.radius, 14)}px">
+              <i><b></b><b></b><b></b></i><span>${l.name}</span></button>`;
+          }).join("")}</div>
+        </div>
+        <div class="set"><h3>Deel je look</h3>
+          <p class="muted hint">Kopieer de code van jouw look en stuur hem naar een vriend, of plak hier een code die je hebt gekregen.</p>
+          <button class="btn sm" data-act="copyStyle" style="align-self:flex-start">${icon("copy", 13)}Mijn code kopiëren</button>
+          <div style="display:flex;gap:8px"><div class="field" style="flex:1;margin:0"><input id="style-code" placeholder="Plak een code (LQ+...)" spellcheck="false"></div><button class="btn" data-act="importStyle">Toepassen</button></div>
+        </div>`,
+      colors: () => `
+        <div class="set"><h3>Accentkleur</h3>
+          <div class="swatches">${LQ_PRESETS.map(p => `<button class="swatch ${p.accent.toLowerCase() === s.accent.toLowerCase() ? "active" : ""}" style="--c:${p.accent}" title="${p.name}" data-set="accent" data-val="${p.accent}"></button>`).join("")}</div>
+          <label class="row"><span>Eigen kleur</span><input type="color" data-setc="accent" value="${esc(s.accent)}"></label>
+        </div>
+        <div class="set"><h3>Verloop</h3>
+          ${sw("gradient", "Knoppen en balken met een verloop")}
+          <label class="row"><span>Tweede kleur</span><input type="color" data-setc="accent2" value="${esc(s.accent2)}"></label>
+          <div class="grad-preview"></div>
+        </div>
+        <div class="set"><h3>Thema</h3>
+          ${seg("theme", [["site", "Auto"], ["light", "Licht"], ["dark", "Donker"]])}
+          ${sel("surface", "Oppervlak", [["zinc", "Neutraal"], ["midnight", "Middernacht"], ["stone", "Warm"], ["tinted", "Getint met accent"]])}
+        </div>`,
+      background: () => `
+        <div class="set"><h3>Achtergrond</h3>
+          ${tiles("background", [["plain", "Effen"], ["grid", "Raster"], ["dots", "Stippen"], ["gradient", "Verloop"], ["aurora", "Aurora"], ["image", "Eigen foto"]])}
+        </div>
+        <div class="set"><h3>Eigen foto</h3>
+          <p class="muted hint">De foto blijft op deze computer en wordt nergens heen gestuurd.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label class="btn sm">${icon("plus", 13)}${local.bgImage ? "Andere foto kiezen" : "Foto kiezen"}<input id="bg-file" type="file" accept="image/*" hidden></label>
+            ${local.bgImage ? `<button class="btn sm ghost" data-act="removeBg">Foto verwijderen</button>` : ""}
+          </div>
+          ${local.bgImage ? `<div class="bg-thumb" style="background-image:url('${local.bgImage}')"></div>${range("bgBlur", "Vervagen", 0, 30, 1, "px")}${range("bgDim", "Verduisteren", 0, 90, 5, "%")}` : ""}
+        </div>
+        <div class="set"><h3>Effecten</h3>
+          ${sw("glass", "Glaseffect op kaarten en balken")}
+        </div>`,
+      shape: () => `
+        <div class="set"><h3>Kaarten</h3>
+          ${tiles("cards", [["default", "Standaard"], ["float", "Zwevend"], ["flat", "Vlak"], ["outline", "Omlijnd"]])}
+        </div>
+        <div class="set"><h3>Vorm en tekst</h3>
+          ${range("radius", "Afronding", 0, 30, 1, "px")}
+          ${range("scale", "Tekstgrootte", 85, 125, 5, "%")}
+          ${sel("font", "Lettertype", [["modern", "Modern"], ["rounded", "Rond"], ["condensed", "Smal"], ["serif", "Klassiek"], ["elegant", "Sierlijk"], ["hand", "Handschrift"], ["mono", "Code"]])}
+          <label class="row"><span>Iconen</span></label>
+          ${seg("iconWeight", [["thin", "Dun"], ["normal", "Normaal"], ["bold", "Dik"]])}
+        </div>
+        <div class="set"><h3>Beweging</h3>
+          ${sw("motion", "Animaties")}
+        </div>`,
+      layout: () => `
+        <div class="set"><h3>Navigatie</h3>
+          ${seg("layout", [["sidebar", "Zijbalk"], ["topbar", "Bovenbalk"]])}
+          ${s.layout === "sidebar" ? seg("side", [["left", "Links"], ["right", "Rechts"]]) + sw("sidebarCompact", "Compacte zijbalk") : ""}
+          <label class="row"><span>Stijl van de balk</span></label>
+          ${seg("sideStyle", [["default", "Standaard"], ["tinted", "Gekleurd"], ["blend", "Doorzichtig"]])}
+        </div>
+        <div class="set"><h3>Ruimte</h3>
+          <label class="row"><span>Breedte van de inhoud</span></label>
+          ${seg("width", [["narrow", "Smal"], ["normal", "Normaal"], ["wide", "Breed"], ["full", "Vol"]])}
+          <label class="row"><span>Dichtheid</span></label>
+          ${seg("density", [["cozy", "Ruim"], ["normal", "Normaal"], ["compact", "Compact"]])}
+        </div>
+        <div class="set"><h3>Persoonlijk</h3>
+          ${sel("startView", "Startpagina", NAV.map(n => [n.id, n.label]))}
+          <label class="row"><span>Naam in de begroeting</span><input class="mini-in" data-sett="nickname" value="${esc(s.nickname)}" placeholder="${esc(firstName(S.user?.name))}" maxlength="24"></label>
+        </div>`,
+      dashboard: () => `
+        <div class="set"><h3>Blokken op het overzicht</h3>
+          <div class="wl">${normalizedWidgets().map((w, i, all) => `<div>
+            <span class="switch"><input type="checkbox" data-widget="${w.id}" ${w.on ? "checked" : ""}><span></span></span>
+            <span>${esc(LQ_WIDGETS.find(x => x.id === w.id).name)}</span>
+            <button class="btn ghost icon" data-wmove="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} title="Omhoog">${icon("up", 15)}</button>
+            <button class="btn ghost icon" data-wmove="${i}" data-dir="1" ${i === all.length - 1 ? "disabled" : ""} title="Omlaag">${icon("down", 15)}</button>
+          </div>`).join("")}</div>
+          ${sw("hideSessions", "Inspiratiesessies verbergen")}
+        </div>
+        <div class="set"><h3>Check-in</h3>
+          ${sw("block4", "4e blok gebruiken")}
+          <small class="muted" style="font-size:12px">Zet dit uit als jouw school maar drie werkblokken per dag heeft.</small>
+        </div>`,
+      advanced: () => `
+        <div class="set"><h3>Eigen CSS</h3>
+          <p class="muted hint">Voor wie verder wil gaan: schrijf je eigen CSS. Gebruik variabelen zoals <code>--accent</code>, <code>--panel</code> en <code>--r</code>, of klassen als <code>.card</code>, <code>.side</code> en <code>.btn</code>.</p>
+          <textarea id="custom-css" class="code-in" rows="9" spellcheck="false" placeholder=".card { border-width: 2px; }&#10;.hero h2 { font-size: 34px; }">${esc(local.customCss)}</textarea>
+          <div style="display:flex;gap:8px"><button class="btn sm primary" data-act="applyCss">Toepassen</button>${local.customCss ? `<button class="btn sm ghost" data-act="clearCss">Leegmaken</button>` : ""}</div>
+        </div>
+        <div class="set"><h3>Weergave</h3>
+          ${seg("mode", [["rewrite", "Nieuwe UI"], ["classic", "Klassiek"], ["off", "Uit"]])}
+          <button class="btn ghost" data-act="reset" style="align-self:flex-start">Alle instellingen terugzetten</button>
+        </div>`
+    };
+
+    const body = `<div class="set-tabs">${SET_TABS.map(([id, l]) => `<button data-settab="${id}" class="${tab === id ? "active" : ""}">${l}</button>`).join("")}</div>
+      <div class="set-body">${tabs[tab]()}</div>`;
+    return drawer("Instellingen", body);
   }
 
   /* ---------- Interactie ---------- */
@@ -1593,7 +1728,7 @@
   }
 
   app.addEventListener("click", e => {
-    const el = e.target.closest("[data-nav],[data-act],[data-panel],[data-ch],[data-ci],[data-chf],[data-set],[data-wmove],[data-room],[data-ciform],[data-cikind],[data-cich],[data-cidur],[data-ciblock],[data-cidel],[data-ciitem]");
+    const el = e.target.closest("[data-nav],[data-act],[data-panel],[data-ch],[data-ci],[data-chf],[data-set],[data-wmove],[data-room],[data-ciform],[data-cikind],[data-cich],[data-cidur],[data-ciblock],[data-cidel],[data-ciitem],[data-look],[data-settab]");
     if (!el || !app.contains(el)) return;
     const ds = el.dataset;
 
@@ -1611,6 +1746,8 @@
     if (ds.room) { S.ui.room = ds.room; LQChat.markRead(ds.room); return render(); }
     if (ds.act && ds.act.startsWith("chat") || ds.act === "copyInvite") return chatAction(ds.act, el);
     if (ds.set) return save({ [ds.set]: ds.val });
+    if (ds.settab) { S.ui.setTab = ds.settab; return render(); }
+    if (ds.look) { save({ ...LQ_LOOKS[Number(ds.look)].set }); return toast("Look " + LQ_LOOKS[Number(ds.look)].name + " toegepast"); }
     if (ds.wmove) {
       const list = normalizedWidgets();
       const i = Number(ds.wmove), j = i + Number(ds.dir);
@@ -1640,7 +1777,27 @@
       case "weekPrev": S.ui.weekOffset--; return render();
       case "weekNext": S.ui.weekOffset++; return render();
       case "weekNow": S.ui.weekOffset = 0; return render();
-      case "reset": return save({ ...LQ_DEFAULTS, mode: "rewrite" });
+      case "reset":
+        if (!confirm("Alle instellingen terugzetten? Je eigen CSS wordt ook gewist.")) return;
+        local.customCss = "";
+        saveLocal({});
+        return save({ ...LQ_DEFAULTS, mode: "rewrite" });
+      case "copyStyle":
+        navigator.clipboard.writeText(exportStyle()).then(() => toast("Code gekopieerd"), () => toast("Kopiëren lukte niet"));
+        return;
+      case "importStyle":
+        try { importStyle(overlayEl.querySelector("#style-code")?.value); toast("Look toegepast"); } catch (err) { toast(err.message); }
+        return;
+      case "removeBg":
+        local.bgImage = "";
+        if (S.settings.background === "image") save({ background: "plain" });
+        return saveLocal({});
+      case "applyCss":
+        saveLocal({ customCss: (overlayEl.querySelector("#custom-css")?.value || "").slice(0, 20000) });
+        return toast("CSS toegepast");
+      case "clearCss":
+        saveLocal({ customCss: "" });
+        return toast("Eigen CSS gewist");
       case "ciAdd": S.ui.form.add = newTask(); return bumpForm();
       case "ciCancelAdd": S.ui.form.add = null; S.ui.form.error = ""; return bumpForm();
       case "ciAddItem": if (addTask()) bumpForm(); return;
@@ -1655,6 +1812,13 @@
     if (t.dataset.sets) return save({ [t.dataset.sets]: t.value });
     if (t.dataset.setr) return save({ [t.dataset.setr]: Number(t.value) });
     if (t.dataset.setc) return save({ [t.dataset.setc]: t.value });
+    if (t.dataset.sett) return save({ [t.dataset.sett]: t.value.trim() });
+    if (t.id === "bg-file" && t.files[0]) {
+      readImage(t.files[0])
+        .then(img => { local.bgImage = img; save({ background: "image" }); saveLocal({}); toast("Foto ingesteld"); })
+        .catch(err => toast(err.message));
+      return;
+    }
     if (t.dataset.widget) {
       const list = normalizedWidgets().map(w => w.id === t.dataset.widget ? { ...w, on: t.checked } : w);
       return save({ widgets: list });
@@ -1668,9 +1832,9 @@
       S.settings[t.dataset.setr] = Number(t.value);
       applyTheme();
       const lbl = t.closest(".row")?.querySelector(".muted");
-      if (lbl) lbl.textContent = t.value + (t.dataset.setr === "radius" ? "px" : "%");
+      if (lbl) lbl.textContent = t.value + (/^(radius|bgBlur)$/.test(t.dataset.setr) ? "px" : "%");
     }
-    if (t.dataset.setc) { S.settings.accent = t.value; applyTheme(); }
+    if (t.dataset.setc) { S.settings[t.dataset.setc] = t.value; applyTheme(); }
     // Check-informulier: alleen de staat bijwerken, niet opnieuw tekenen tijdens het typen
     const f = S.ui.form;
     if (f && t.dataset.cif) {
@@ -1759,7 +1923,11 @@
 
   chrome.storage.sync.get(LQ_DEFAULTS, stored => {
     S.settings = { ...LQ_DEFAULTS, ...stored };
-    if (S.settings.mode === "rewrite") boot();
+    chrome.storage.local.get({ lqBgImage: "", lqCustomCss: "" }, l => {
+      local.bgImage = l.lqBgImage || "";
+      local.customCss = l.lqCustomCss || "";
+      if (S.settings.mode === "rewrite") boot();
+    });
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
