@@ -1,0 +1,43 @@
+{
+  "name": "mylearnq-api",
+  "version": "0.1.0",
+  "description": "Onofficiële, alleen lezende JavaScript client voor MyLearnQ (check-ins, challenges, groei, ideeën)",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "bin": {
+    "mylearnq": "./bin/cli.js"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mylearnq",
+    "sveltekit",
+    "api",
+    "client",
+    "school"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JustMrKoala/mylearnq-plus.git",
+    "directory": "api"
+  },
+  "homepage": "https://github.com/JustMrKoala/mylearnq-plus/tree/main/api#readme",
+  "bugs": "https://github.com/JustMrKoala/mylearnq-plus/issues",
+  "license": "MIT"
+}
