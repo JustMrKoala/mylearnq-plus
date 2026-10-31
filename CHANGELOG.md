@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 (31 oktober 2026)
+
+- Naam en beschrijving in het Nederlands en Engels, zodat de store beide talen herkent.
+
 ## 1.1.0 (31 oktober 2026)
 
 - Check-in helemaal in de nieuwe interface: taken plannen, de vragen invullen, als concept opslaan en een check-out doen. Opslaan gebeurt via dezelfde acties als het formulier van MyLearnQ.

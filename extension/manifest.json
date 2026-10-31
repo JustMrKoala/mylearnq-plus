@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "MyLearnQ+ (onofficieel)",
+  "default_locale": "nl",
+  "name": "__MSG_extName__",
   "short_name": "MyLearnQ+",
-  "version": "1.1.0",
-  "description": "Onofficiële, aanpasbare interface voor MyLearnQ met een versleutelde chat. Niet verbonden aan MyLearnQ.",
+  "version": "1.1.1",
+  "description": "__MSG_extDesc__",
   "homepage_url": "https://github.com/JustMrKoala/mylearnq-plus",
   "permissions": [
     "storage"
