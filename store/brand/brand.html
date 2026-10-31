@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>MyLearnQ+ beeldmateriaal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; color: #fff; }
+  body.icon { background: transparent; display: grid; place-items: center; }
+  body.icon img { width: 100%; height: 100%; }
+
+  .tile {
+    position: relative; width: 100%; height: 100%; overflow: hidden;
+    background:
+      radial-gradient(60% 90% at 0% 0%, rgba(51, 100, 188, .35), transparent 70%),
+      radial-gradient(50% 80% at 100% 100%, rgba(63, 127, 110, .35), transparent 70%),
+      #10151c;
+  }
+  .brand { position: absolute; display: flex; align-items: center; }
+  .brand img { flex: none; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .45)); }
+  .name { font-weight: 650; letter-spacing: -.02em; line-height: 1; }
+  .name b { color: #6fc3a9; font-weight: 650; }
+  .tag { color: #a9b4c2; line-height: 1.35; margin-top: .45em; }
+  .note { color: #6b7686; margin-top: .9em; }
+
+  body.small .brand { inset: 0; padding: 0 34px; gap: 22px; }
+  body.small .brand img { width: 118px; }
+  body.small .name { font-size: 46px; }
+  body.small .tag { font-size: 18px; }
+
+  body.large .brand { left: 96px; top: 0; bottom: 0; width: 560px; gap: 30px; }
+  body.large .brand img { width: 150px; }
+  body.large .name { font-size: 72px; }
+  body.large .tag { font-size: 26px; }
+  body.large .note { font-size: 17px; }
+  body.large .shot {
+    position: absolute; left: 720px; top: 70px; width: 820px;
+    border-radius: 14px; border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+    transform: perspective(1600px) rotateY(-14deg) rotateX(4deg);
+    transform-origin: left center;
+  }
+  .tile:not(.has-shot) .shot { display: none; }
+</style>
+</head>
+<body>
+<script>
+  // ?kind=icon, ?kind=small (440x280) of ?kind=large (1400x560)
+  const kind = new URLSearchParams(location.search).get("kind") || "icon";
+  document.body.className = kind;
+  document.body.innerHTML = kind === "icon"
+    ? `<img src="logo.svg" alt="">`
+    : `<div class="tile ${kind === "large" ? "has-shot" : ""}">
+        <img class="shot" src="../screenshots/1-overzicht.png" alt="">
+        <div class="brand">
+          <img src="logo.svg" alt="">
+          <div>
+            <div class="name">MyLearnQ<b>+</b></div>
+            <div class="tag">${kind === "large" ? "Een rustige, aanpasbare interface<br>met versleutelde chat" : "Rustig, aanpasbaar,<br>versleutelde chat"}</div>
+            ${kind === "large" ? `<div class="note">Onofficieel, niet verbonden aan MyLearnQ</div>` : ""}
+          </div>
+        </div>
+      </div>`;
+</script>
+</body>
+</html>

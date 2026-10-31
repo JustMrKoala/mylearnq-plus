@@ -21,10 +21,12 @@ Alles wat je nodig hebt om MyLearnQ+ in te dienen via [Partner Center](https://p
 | [`images/promo-1400x560.png`](images/promo-1400x560.png) | Large promotional tile | 1400 × 560 |
 | [`screenshots/`](screenshots) | Screenshots (maximaal 10) | 1280 × 800 |
 
+Het logo en de promotegels komen uit [`brand/`](brand). Opnieuw maken (ook de extensie-iconen): `./scripts/brand.ps1`.
+
 De screenshots tonen de echte extensiecode met **verzonnen** gegevens uit [`demo/`](demo), zodat er geen echte leerlingen in de store staan. Opnieuw maken: `./scripts/screenshots.ps1`.
 
 ## Aandachtspunten voor de beoordeling
 
-- **Merknaam.** De naam bevat "MyLearnQ", een naam van een ander. Daarom staat overal duidelijk "onofficieel" en "niet verbonden aan MyLearnQ". Het extensie-icoon is eigen werk; het logo van MyLearnQ wordt niet meegeleverd, maar alleen op de site zelf uit de pagina overgenomen. Vraagt Microsoft toch om een andere naam, dan is iets als "LearnQ Plus" een optie.
+- **Merknaam en logo.** De naam bevat "MyLearnQ" en het icoon is het blokje uit de favicon van MyLearnQ met een eigen plusbadge. Dat zijn naam en beeld van een ander. Daarom staat overal duidelijk "onofficieel" en "niet verbonden aan MyLearnQ". Vraagt Microsoft toch om iets anders, dan is een eigen icoon en een naam als "LearnQ Plus" een optie.
 - **Testers kunnen niet inloggen.** De extensie werkt alleen met een schoolaccount. In de notities staat daarom uitgelegd wat ze kunnen controleren zonder account.
 - **Externe dienst.** De chat gebruikt ntfy.sh. Dat staat in de beschrijving, het privacybeleid en de rechtvaardiging van de machtigingen.
