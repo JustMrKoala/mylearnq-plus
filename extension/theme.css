@@ -325,6 +325,42 @@ html[data-lq-icon="bold"] svg[stroke-width] { stroke-width: 2.6; }
 /* Voettekst verbergen */
 html[data-lq-hide-footer="on"] footer { display: none !important; }
 
+/* Chat en instellingen van MyLearnQ+ rechtsboven in de kop van de site */
+.lq-hbtns { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; }
+.lq-hbtn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 9999px;
+  border: 0;
+  background: color-mix(in oklab, currentColor 14%, transparent);
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+.lq-hbtn:hover { background: color-mix(in oklab, currentColor 24%, transparent); }
+.lq-hbtn:active { transform: scale(0.94); }
+.lq-hbtn svg { width: 18px; height: 18px; }
+.lq-hbtn[data-lq="settings"]:hover svg { transform: rotate(45deg); transition: transform 0.4s; }
+.lq-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  font: 600 10.5px/17px system-ui, sans-serif;
+  font-style: normal;
+  color: #fff;
+  background: var(--lq-accent, #3f7f6e);
+}
+.lq-badge[hidden] { display: none; }
+html[data-lq-mode="rewrite"] .lq-hbtns, html[data-lq-embed] .lq-hbtns { display: none; }
+
 /* Nieuwe UI: de originele app blijft draaien (voor de sessie), maar onzichtbaar */
 html[data-lq-mode="rewrite"]:not([data-lq-embed]) body > :not(#lq-host) {
   display: none !important;

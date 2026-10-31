@@ -64,6 +64,7 @@
     shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
     send: '<path d="M4 12 20 4l-4 16-4-7z"/><path d="m12 13 8-9"/>',
     leave: '<path d="M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5M10 16l-4-4 4-4M6 12h10"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     join: '<path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5M14 16l4-4-4-4M18 12H8"/>'
   };
   const icon = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${ICONS[n] || ""}</svg>`;
@@ -353,7 +354,7 @@
 
   function render() {
     applyTheme();
-    if (S.panelOnly) { renderOverlay(); return; }
+    if (S.panelOnly) return renderPanel();
     if (S.error === "auth") { shellEl.innerHTML = authScreen(); overlayEl.innerHTML = ""; lastOverlay = null; hideSplash(); return; }
 
     const [title, sub] = (TITLES[S.view] || TITLES.dashboard)();
@@ -1547,7 +1548,7 @@
   }
 
   function onChatUpdate() {
-    if (S.view === "chat" && S.ui.room && document.visibilityState === "visible") LQChat.markRead(S.ui.room);
+    if ((S.view === "chat" || (S.panelOnly && S.ui.classicChat)) && S.ui.room && document.visibilityState === "visible") LQChat.markRead(S.ui.room);
     // Een open formulier in een lade niet verstoren
     if (S.ui.drawer && /^chat(New|Join)$/.test(S.ui.drawer.type)) return;
     render();
@@ -1778,6 +1779,8 @@
 
     switch (ds.act) {
       case "customize": S.ui.drawer = { type: "settings" }; return render();
+      case "openChat": S.ui.classicChat = !S.ui.classicChat; return render();
+      case "closeChat": S.ui.classicChat = false; return render();
       case "closeDrawer": {
         const wasPanel = S.ui.drawer?.type === "panel";
         if (S.ui.drawer?.type === "ciForm") {
@@ -1892,6 +1895,9 @@
       S.ui.drawer = null;
       S.ui.form = null;
       render();
+    } else if (e.key === "Escape" && S.panelOnly && S.ui.classicChat) {
+      S.ui.classicChat = false;
+      render();
     }
   });
   app.addEventListener("keydown", e => {
@@ -1919,12 +1925,94 @@
     return v || S.settings.startView || "dashboard";
   }
 
-  // Klassieke weergave: de originele site blijft zichtbaar, wij tonen alleen een
-  // instellingenknop met hetzelfde paneel als in de nieuwe UI
+  // Klassieke weergave: de originele site blijft zichtbaar. Wij zetten een tandwiel en
+  // een chatknop in de kop van de site, met hetzelfde paneel en dezelfde chat als in de nieuwe UI
   function setPanelOnly(on) {
     S.panelOnly = on;
     host.classList.toggle("panel-only", on);
     app.classList.toggle("panel-only", on);
+    if (!on) { headerObs?.disconnect(); headerObs = null; document.querySelector(".lq-hbtns")?.remove(); S.ui.classicChat = false; }
+  }
+
+  let headerObs = null, headerBtns = null;
+  function ensureHeaderButtons() {
+    if (!S.panelOnly) return false;
+    if (!headerBtns) {
+      headerBtns = document.createElement("div");
+      headerBtns.className = "lq-hbtns";
+      headerBtns.innerHTML = `<button type="button" class="lq-hbtn" data-lq="chat" title="Chat" aria-label="Chat">${icon("chat", 18)}<em class="lq-badge" hidden></em></button>
+        <button type="button" class="lq-hbtn" data-lq="settings" title="MyLearnQ+ instellingen" aria-label="Instellingen">${icon("gear", 18)}</button>`;
+      headerBtns.addEventListener("click", e => {
+        const b = e.target.closest("[data-lq]");
+        if (!b) return;
+        if (b.dataset.lq === "chat") S.ui.classicChat = !S.ui.classicChat;
+        else S.ui.drawer = S.ui.drawer?.type === "settings" ? null : { type: "settings" };
+        render();
+      });
+    }
+    // Rechts in de kop, voor de knoppen van de site zelf. Svelte tekent de kop soms
+    // opnieuw, dus we zetten de knoppen terug als ze verdwijnen.
+    const header = document.querySelector("body > :not(#lq-host) header");
+    if (header && !header.contains(headerBtns)) {
+      const slot = header.children.length > 1 ? header.lastElementChild : header;
+      slot.prepend(headerBtns);
+    }
+    if (!headerObs && document.body) {
+      let queued = false;
+      headerObs = new MutationObserver(() => {
+        if (queued || headerBtns.isConnected) return;
+        queued = true;
+        requestAnimationFrame(() => { queued = false; if (ensureHeaderButtons()) render(); });
+      });
+      headerObs.observe(document.body, { childList: true, subtree: true });
+    }
+    return headerBtns.isConnected;
+  }
+
+  function updateBadge() {
+    const em = headerBtns?.querySelector(".lq-badge");
+    if (!em) return;
+    const n = S.chatReady ? LQChat.rooms.reduce((a, r) => a + LQChat.unread(r.id), 0) : 0;
+    em.hidden = !n;
+    em.textContent = n > 9 ? "9+" : n;
+  }
+
+  function renderPanel() {
+    const inHeader = ensureHeaderButtons();
+    const open = !!S.ui.classicChat;
+    if (!open) lastShell = "";
+    const key = ["panel", open, S.ui.room, !!S.chatReady].join("|");
+    const same = key === lastShell;
+    const kept = keepInputs();
+    const msgsEl = shellEl.querySelector(".msgs");
+    const nearBottom = !msgsEl || msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
+    const msgsTop = msgsEl ? msgsEl.scrollTop : 0;
+    // Zonder kop van de site (bijvoorbeeld op een lege pagina) staan de knoppen zelf rechtsboven
+    const fab = inHeader ? "" : `<div class="fab-row">
+      <button class="btn icon" data-act="openChat" title="Chat">${icon("chat")}</button>
+      <button class="btn icon" data-act="customize" title="Instellingen">${icon("gear")}</button></div>`;
+    const chat = open ? `<section class="cchat">
+      <div class="cchat-h"><b>${icon("chat", 16)} Chat</b><button class="btn ghost icon" data-act="closeChat" title="Sluiten">${icon("x")}</button></div>
+      ${chatView()}</section>` : "";
+    shellEl.innerHTML = fab + chat;
+    shellEl.classList.toggle("still", same);
+    restoreInputs(kept);
+    const m = shellEl.querySelector(".msgs");
+    if (m) m.scrollTop = !same || nearBottom ? m.scrollHeight : msgsTop;
+    lastShell = open ? key : "";
+    renderOverlay();
+    updateBadge();
+  }
+
+  // Chat één keer starten, met de naam als "Voornaam L."
+  function startChat(user) {
+    if (S.chatStarted || !user) return;
+    S.chatStarted = true;
+    const parts = String(user.name || "").split(",");
+    const display = ((parts[1] || parts[0]).trim().split(" ")[0] + " " + (parts[1] ? parts[0].trim()[0] + "." : "")).trim();
+    LQChat.init(display, onChatUpdate)
+      .then(() => { S.chatReady = true; render(); })
+      .catch(e => { S.chatErr = e.message || String(e); render(); });
   }
 
   // Schakelt tussen nieuwe UI, klassieke weergave en uit, alleen als de modus echt verandert
@@ -1947,9 +2035,14 @@
   function bootPanel() {
     setPanelOnly(true);
     lastShell = "";
-    shellEl.innerHTML = `<button class="fab" data-act="customize" title="MyLearnQ+ instellingen"><img src="${LOGO}" alt=""><span>Instellingen</span></button>`;
+    shellEl.innerHTML = "";
     mount();
     render();
+    if (!S.user) {
+      fetchRoute("/student")
+        .then(root => { S.user = root.dbUser || root.user; S.uid = S.user?.userId; startChat(S.user); })
+        .catch(() => {});
+    } else startChat(S.user);
   }
 
   async function boot() {
@@ -1969,11 +2062,7 @@
     }
     S.view = initialView();
     render();
-    const parts = String(S.user.name || "").split(",");
-    const display = ((parts[1] || parts[0]).trim().split(" ")[0] + " " + (parts[1] ? parts[0].trim()[0] + "." : "")).trim();
-    LQChat.init(display, onChatUpdate)
-      .then(() => { S.chatReady = true; render(); })
-      .catch(e => { S.chatErr = e.message || String(e); render(); });
+    startChat(S.user);
   }
 
   chrome.storage.sync.get(LQ_DEFAULTS, stored => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0 (31 oktober 2026)
+
+- Klassieke weergave: de instellingen zitten nu achter een tandwiel rechtsboven in de kop van de site.
+- Klassieke weergave: de chat is erbij, met een knop rechtsboven (met het aantal nieuwe berichten) die een chatvenster opent.
+
 ## 1.4.0 (31 oktober 2026)
 
 - De klassieke weergave heeft een eigen knop Instellingen linksonder, met hetzelfde paneel als de nieuwe UI.
