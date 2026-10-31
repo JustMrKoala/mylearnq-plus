@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "MyLearnQ+ (onofficieel)",
+  "short_name": "MyLearnQ+",
+  "version": "1.0.0",
+  "description": "Onofficiële, aanpasbare interface voor MyLearnQ met een versleutelde chat. Niet verbonden aan MyLearnQ.",
+  "homepage_url": "https://github.com/JustMrKoala/mylearnq-plus",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://app.mylearnq.com/*",
+    "https://ntfy.sh/*"
+  ],
+  "action": {
+    "default_title": "MyLearnQ+",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://app.mylearnq.com/*"
+      ],
+      "js": [
+        "defaults.js",
+        "classic.js",
+        "chat.js",
+        "app.js"
+      ],
+      "css": [
+        "theme.css"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "app.css"
+      ],
+      "matches": [
+        "https://app.mylearnq.com/*"
+      ]
+    }
+  ]
+}

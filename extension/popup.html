@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <title>MyLearnQ+</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="icons/icon48.png" alt="">
+      <div>
+        <h1>MyLearnQ<span style="color:var(--accent)">+</span></h1>
+        <p>Meer opties via Aanpassen in de app</p>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Weergave</h2>
+    <div class="segmented" data-key="mode">
+      <button value="rewrite">Nieuwe UI</button>
+      <button value="classic">Klassiek</button>
+      <button value="off">Uit</button>
+    </div>
+  </section>
+
+  <main id="controls">
+    <section>
+      <h2>Accentkleur</h2>
+      <div class="swatches" id="swatches"></div>
+      <label class="row">
+        <span>Eigen kleur</span>
+        <input type="color" data-key="accent">
+      </label>
+    </section>
+
+    <section>
+      <h2>Thema</h2>
+      <div class="segmented" data-key="theme">
+        <button value="site">Auto</button>
+        <button value="light">Licht</button>
+        <button value="dark">Donker</button>
+      </div>
+      <label class="row">
+        <span>Oppervlak</span>
+        <select data-key="surface">
+          <option value="zinc">Neutraal</option>
+          <option value="midnight">Middernacht</option>
+          <option value="stone">Warm</option>
+          <option value="tinted">Getint met accent</option>
+        </select>
+      </label>
+      <label class="row">
+        <span>Achtergrond</span>
+        <select data-key="background">
+          <option value="plain">Effen</option>
+          <option value="grid">Raster</option>
+          <option value="dots">Stippen</option>
+        </select>
+      </label>
+    </section>
+
+    <section>
+      <h2>Vorm en tekst</h2>
+      <label class="row">
+        <span>Afronding <output id="radiusOut"></output></span>
+        <input type="range" min="0" max="32" step="1" data-key="radius">
+      </label>
+      <label class="row">
+        <span>Tekstgrootte <output id="scaleOut"></output></span>
+        <input type="range" min="85" max="120" step="5" data-key="scale">
+      </label>
+      <label class="row">
+        <span>Lettertype</span>
+        <select data-key="font">
+          <option value="modern">Modern</option>
+          <option value="rounded">Rond</option>
+          <option value="serif">Klassiek</option>
+          <option value="mono">Code</option>
+        </select>
+      </label>
+    </section>
+
+    <section>
+      <h2>Effecten</h2>
+      <label class="row toggle">
+        <span>Glaseffect</span>
+        <input type="checkbox" data-key="glass">
+      </label>
+      <label class="row toggle">
+        <span>Animaties</span>
+        <input type="checkbox" data-key="motion">
+      </label>
+    </section>
+  </main>
+
+  <section class="standalone">
+    <h2>Dashboard</h2>
+    <label class="row toggle">
+      <span>Inspiratiesessie verbergen</span>
+      <input type="checkbox" data-key="hideSessions">
+    </label>
+  </section>
+
+  <footer>
+    <button id="reset">Standaard herstellen</button>
+  </footer>
+
+  <script src="defaults.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
