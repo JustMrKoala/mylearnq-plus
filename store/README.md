@@ -19,7 +19,7 @@ Alles wat je nodig hebt om MyLearnQ+ in te dienen via [Partner Center](https://p
 | [`images/logo-300.png`](images/logo-300.png) | Extension logo (verplicht) | 300 × 300 |
 | [`images/promo-440x280.png`](images/promo-440x280.png) | Small promotional tile | 440 × 280 |
 | [`images/promo-1400x560.png`](images/promo-1400x560.png) | Large promotional tile | 1400 × 560 |
-| [`screenshots/`](screenshots) | Screenshots (maximaal 10) | 1280 × 800 |
+| [`screenshots/`](screenshots) | Zeven screenshots (maximaal 10) | 1280 × 800 |
 
 Het logo en de promotegels komen uit [`brand/`](brand). Opnieuw maken (ook de extensie-iconen): `./scripts/brand.ps1`.
 

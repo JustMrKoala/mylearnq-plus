@@ -1,6 +1,14 @@
 // Verzonnen demogegevens voor de storescreenshots. Draait de echte app.js,
 // maar met een nagebootste chrome API, fetch en chat. Geen echte personen.
 (() => {
+  // Vaste datum (een woensdag) zodat de screenshots er altijd hetzelfde uitzien
+  const RealDate = Date;
+  const FIXED = new RealDate(2026, 9, 28, 10, 30).getTime();
+  window.Date = class extends RealDate {
+    constructor(...a) { super(...(a.length ? a : [FIXED])); }
+    static now() { return FIXED; }
+  };
+
   const pad = n => String(n).padStart(2, "0");
   const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const day = n => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
@@ -56,7 +64,7 @@
     { date: wk(1), status: "published", yesterdayReflection: "Interview opgenomen.", learningsOrResults: "Montage kost meer tijd dan ik dacht.", helpOrObstacles: "Niks", successCriteria: "Ruwe montage klaar.", items: [item(1, "Podcast monteren", 90, 2), item(2, "Grond testen met de klas", 60, 1)] },
     { date: wk(2), status: "published", yesterdayReflection: "Ruwe montage klaar.", learningsOrResults: "", helpOrObstacles: "", successCriteria: "Spel heeft een werkend menu.", items: [item(1, "Spelmenu bouwen", 90, 3), item(2, "Spaanse woordjes", 30, 4)] },
     { date: wk(3), status: "draft", yesterdayReflection: "", learningsOrResults: "", helpOrObstacles: "", successCriteria: "", items: [item(1, "Presentatie voorbereiden", 60, 2)] },
-    ...[7, 8, 9, 10, 11].map(n => ({ date: wk(-n + (n > 9 ? -2 : 0)), status: "published", yesterdayReflection: "Verder gewerkt aan mijn challenges.", learningsOrResults: "", helpOrObstacles: "", successCriteria: "", items: [item(1, "Werken aan challenge", 90, 1)] }))
+    ...[-7, -10, -11, -12, -13].map(n => ({ date: wk(n), status: "published", yesterdayReflection: "Verder gewerkt aan mijn challenges.", learningsOrResults: "", helpOrObstacles: "", successCriteria: "", items: [item(1, "Werken aan challenge", 90, 1)] }))
   ].filter(c => c.date <= iso(new Date()));
   const checkInSettings = [
     ["yesterday_reflection", "Wat heb je de laatste schooldag gedaan?"],

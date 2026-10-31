@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MyLearnQ+ (onofficieel)",
   "short_name": "MyLearnQ+",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Onofficiële, aanpasbare interface voor MyLearnQ met een versleutelde chat. Niet verbonden aan MyLearnQ.",
   "homepage_url": "https://github.com/JustMrKoala/mylearnq-plus",
   "permissions": [
@@ -47,7 +47,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "app.css"
+        "app.css",
+        "icons/logo.svg"
       ],
       "matches": [
         "https://app.mylearnq.com/*"

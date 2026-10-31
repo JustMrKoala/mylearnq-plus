@@ -18,11 +18,11 @@ Een onofficiële browserextensie die [MyLearnQ](https://app.mylearnq.com) een ni
 ## Functies van de extensie
 
 - **Nieuwe interface** voor Overzicht, Check-in, Challenges, Ideeën en Groei in beeld, gebouwd op de gegevens die de site zelf ook laadt.
-- **Bewerken blijft werken:** invullen en wijzigen gebeurt in het originele formulier, geopend in een zijpaneel. De extensie schrijft zelf nooit iets naar MyLearnQ.
+- **Check-in direct invullen:** taken plannen, je check-in invullen en een check-out doen kan helemaal in de nieuwe interface. De extensie gebruikt daarvoor dezelfde opslagacties als het formulier van MyLearnQ zelf. Challenges, ideeën en reflecties bewerk je in het originele formulier, geopend in een zijpaneel.
 - **Aanpasbaar:** accentkleur, licht of donker thema, oppervlak, achtergrond, zijbalk of bovenbalk, dichtheid, afronding, lettertype, tekstgrootte, en welke dashboardblokken je ziet en in welke volgorde.
 - **Inspiratiesessies verbergen** voor scholen waar die niet van toepassing zijn.
 - **Klassieke weergave:** liever de originele site? Dan krijgt die alleen een nieuwe stijl.
-- **Versleutelde chat** met geheime kamercodes (zie hieronder).
+- **Versleutelde chat** in groepen: maak een groep, kopieer de uitnodiging en stuur hem naar je klasgenoten (zie hieronder).
 
 ## Installeren
 
@@ -43,14 +43,14 @@ Binnenkort in de Microsoft Edge Add-ons store.
 Berichten gaan via de openbare relay [ntfy.sh](https://ntfy.sh). Ze worden in je browser versleuteld voordat ze worden verstuurd.
 
 1. **Handtekening:** elk bericht wordt ondertekend met een ECDSA P-256 sleutel die alleen op jouw apparaat staat. Ontvangers controleren de handtekening en zien een sleutelvingerafdruk. Gebruikt iemand dezelfde naam met een andere sleutel, dan krijg je een waarschuwing.
-2. **Kamerlaag:** AES-256-GCM met een sleutel die met PBKDF2 (SHA-256, 250.000 rondes) wordt afgeleid van de geheime kamercode van 20 tekens (100 bits).
+2. **Groepslaag:** AES-256-GCM met een sleutel die met PBKDF2 (SHA-256, 250.000 rondes) wordt afgeleid van de geheime groepscode van 20 tekens (100 bits). Die code zit in de uitnodiging.
 3. **Applaag:** nog een laag AES-256-GCM met een vaste appsleutel, zodat de relay geen herkenbare structuur ziet.
 
 Elke laag gebruikt een eigen willekeurige IV en bindt context via additional data. Berichten hebben een uniek ID en een tijdstempel, zodat herhaalde of verplaatste berichten worden geweigerd.
 
 **Eerlijk over de grenzen:**
 
-- De appsleutel staat in de broncode en is voor iedereen gelijk. De echte bescherming is de kamercode: deel die alleen persoonlijk.
+- De appsleutel staat in de broncode en is voor iedereen gelijk. De echte bescherming is de groepscode in de uitnodiging: deel die alleen met mensen die je vertrouwt.
 - ntfy.sh bewaart berichten maximaal 12 uur. Je eigen geschiedenis blijft versleuteld op je computer staan.
 - De relay ziet wel wanneer er berichten zijn en vanaf welk IP-adres ze komen.
 - Dit is een schoolproject en is niet door een expert gecontroleerd. Gebruik het niet voor echt gevoelige informatie.

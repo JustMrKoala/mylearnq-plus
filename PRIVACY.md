@@ -1,6 +1,6 @@
 # Privacybeleid MyLearnQ+
 
-Laatst bijgewerkt: 31 oktober 2026
+Laatst bijgewerkt: 31 oktober 2026 (versie 1.1.0)
 
 MyLearnQ+ is een onofficiële browserextensie voor app.mylearnq.com. Dit beleid legt uit welke gegevens de extensie gebruikt.
 
@@ -15,22 +15,24 @@ Deze gegevens worden alleen in je browser getoond. Ze worden niet naar de maker 
 In de opslag van je browser:
 
 - Je instellingen (kleuren, lay-out en dergelijke), via de synchronisatie van je browser.
-- Voor de chat: je kamercodes, een sleutelpaar dat op dit apparaat is aangemaakt, en je berichtgeschiedenis in versleutelde vorm.
+- Voor de chat: de codes van je groepen, een sleutelpaar dat op dit apparaat is aangemaakt, en je berichtgeschiedenis in versleutelde vorm.
 
 ## Wat de extensie verstuurt
 
-Alleen chatberichten die je zelf verstuurt. Ze worden in je browser versleuteld (AES-256-GCM, twee lagen) en via de openbare dienst ntfy.sh doorgestuurd naar de mensen in dezelfde kamer. Een bericht bevat je weergavenaam (voornaam en eerste letter van je achternaam) en je publieke sleutel, maar die zijn alleen leesbaar voor wie de kamercode heeft. ntfy.sh bewaart versleutelde berichten maximaal 12 uur en kan, zoals elke server, je IP-adres zien. Zie het [privacybeleid van ntfy.sh](https://ntfy.sh/docs/privacy/).
+**Naar MyLearnQ:** als je in de extensie een check-in, geplande taken of een check-out opslaat, stuurt de extensie die naar MyLearnQ, op dezelfde manier als het formulier van de site zelf. Dat gebeurt alleen als jij op opslaan klikt.
+
+**Chatberichten** die je zelf verstuurt. Ze worden in je browser versleuteld (AES-256-GCM, twee lagen) en via de openbare dienst ntfy.sh doorgestuurd naar de mensen in dezelfde groep. Een bericht bevat je weergavenaam (voornaam en eerste letter van je achternaam) en je publieke sleutel, maar die zijn alleen leesbaar voor wie de uitnodiging (met de groepscode) heeft. ntfy.sh bewaart versleutelde berichten maximaal 12 uur en kan, zoals elke server, je IP-adres zien. Zie het [privacybeleid van ntfy.sh](https://ntfy.sh/docs/privacy/).
 
 ## Wat de extensie niet doet
 
 - Geen analytics, tracking of advertenties.
 - Geen eigen server.
 - Geen gegevens verkopen of delen.
-- Niets wijzigen in MyLearnQ. Bewerken gebeurt in de originele formulieren van de site.
+- Niets in MyLearnQ wijzigen zonder dat jij op opslaan klikt.
 
 ## Verwijderen
 
-Verlaat een chatkamer om de geschiedenis van die kamer te wissen. Als je de extensie verwijdert, wist je browser alle opgeslagen gegevens van de extensie.
+Verlaat een chatgroep om de geschiedenis van die groep op deze computer te wissen. Als je de extensie verwijdert, wist je browser alle opgeslagen gegevens van de extensie.
 
 ## Contact
 

@@ -19,9 +19,11 @@ $shots = [ordered]@{
   "2-challenges"  = "view=challenges"
   "3-challenge"   = "view=challenges&click=" + [uri]::EscapeDataString('[data-ch="2"]')
   "4-check-in"    = "view=checkin&theme=light"
-  "5-chat"        = "view=chat&click=" + [uri]::EscapeDataString('[data-room="demo"]')
-  "6-aanpassen"   = "view=dashboard&theme=light&accent=%233563c9&click=" + [uri]::EscapeDataString('[data-act="customize"]')
+  "5-plannen"     = "view=checkin&theme=light&click=" + [uri]::EscapeDataString('.day:nth-child(4) [data-ciform]')
+  "6-chat"        = "view=chat&click=" + [uri]::EscapeDataString('[data-room="demo"]')
+  "7-aanpassen"   = "view=dashboard&theme=light&accent=%233563c9&click=" + [uri]::EscapeDataString('[data-act="customize"]')
 }
+Get-ChildItem $out -Filter *.png | Remove-Item
 
 foreach ($name in $shots.Keys) {
   $file = Join-Path $out "$name.png"

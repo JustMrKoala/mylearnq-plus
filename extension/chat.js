@@ -206,10 +206,10 @@ const LQChat = (() => {
 
   async function joinRoom(code, label) {
     code = normalizeCode(code);
-    if (code.length < 16) throw new Error("Deze code is te kort. Een kamercode heeft 20 tekens.");
+    if (code.length !== 20) throw new Error("Deze code klopt niet. Plak de hele uitnodiging, of een code van 20 tekens.");
     const info = await roomInfo(code);
     if (S.rooms.some(r => r.id === info.id)) return info.id;
-    const r = await loadRoom({ code, label: label || "Kamer " + code.slice(0, 4), joinedAt: Date.now(), lastRead: Date.now() });
+    const r = await loadRoom({ code, label: label || "Groep " + code.slice(0, 4), joinedAt: Date.now(), lastRead: Date.now() });
     S.rooms.push(r);
     await saveRooms();
     subscribe(r);

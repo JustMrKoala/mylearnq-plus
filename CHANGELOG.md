@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 (31 oktober 2026)
+
+- Check-in helemaal in de nieuwe interface: taken plannen, de vragen invullen, als concept opslaan en een check-out doen. Opslaan gebeurt via dezelfde acties als het formulier van MyLearnQ.
+- In het weekend toont de check-in de komende week, net als op de site.
+- Eenvoudigere chat: groepen in plaats van kamers, een uitnodiging die je kopieert en plakt, en de technische details achter een knop.
+- Nieuw logo (het MyLearnQ blokje met een plus) en MyLearnQ+ linksboven.
+- Openingsanimatie bij het laden.
+
 ## 1.0.0 (31 oktober 2026)
 
 Eerste publieke versie.
