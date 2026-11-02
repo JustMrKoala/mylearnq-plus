@@ -971,3 +971,11 @@ svg { flex: none; }
 .mini-in:focus, .code-in:focus { border-color: var(--accent); }
 .code-in { width: 100%; padding: 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--bg); font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; resize: vertical; outline: 0; }
 label.btn { cursor: pointer; }
+
+/* Inspiratiesessies */
+.sess-img { height: 140px; margin: calc(var(--pad) * -1) calc(var(--pad) * -1) 4px; border-radius: var(--r) var(--r) 0 0; background-size: cover; background-position: center; background-color: var(--panel-2); }
+.card.sess { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.card.sess h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.card.sess .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+.card.sess .meta > span { display: inline-flex; align-items: center; gap: 5px; }
+.sess-chip { display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: var(--r-xs); font-size: 12px; font-weight: 550; color: color-mix(in oklab, #d39b2a 80%, var(--text)); background: color-mix(in oklab, #d39b2a 14%, var(--panel)); }

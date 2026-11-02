@@ -2,6 +2,7 @@
 const LQ_WIDGETS = [
   { id: "today", name: "Vandaag" },
   { id: "streak", name: "Check-in ritme" },
+  { id: "sessions", name: "Inspiratiesessie" },
   { id: "challenges", name: "Actieve challenges" },
   { id: "growth", name: "Kernwaarden" },
   { id: "worlds", name: "Werelden" },
@@ -20,7 +21,7 @@ const LQ_DEFAULTS = {
   scale: 100,
   glass: false,
   motion: true,
-  hideSessions: true,
+  hideSessions: false,
   block4: true,         // 4e werkblok tonen bij het plannen van taken
   layout: "sidebar",    // sidebar | topbar
   sidebarCompact: false,

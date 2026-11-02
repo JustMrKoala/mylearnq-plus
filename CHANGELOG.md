@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.0 (2 november 2026)
+
+- Inspiratiesessies terug in de nieuwe UI: een eigen pagina (komend, aangemeld en geweest), een blok op het overzicht en je sessie in de check-inweek.
+- Inspiratiesessies staan nu standaard aan. Verbergen kan onder Instellingen, Dashboard.
+
 ## 1.5.0 (31 oktober 2026)
 
 - Klassieke weergave: de instellingen zitten nu achter een tandwiel rechtsboven in de kop van de site.

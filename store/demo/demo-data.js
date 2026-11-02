@@ -77,7 +77,7 @@
 
   const routes = {
     "/student": { dbUser: user },
-    "/checkin/1": { checkIns, challenges, checkInSettings, challengeOwners: people, plannedMinutesByChallenge: { 1: 360, 2: 480, 3: 270, 4: 90 }, worlds },
+    "/checkin/1": { checkIns, challenges, checkInSettings, challengeOwners: people, plannedMinutesByChallenge: { 1: 360, 2: 480, 3: 270, 4: 90 }, worlds, registeredSessions: [{ sessionId: 1, title: "Politieke partijen", sessionDate: wk(2), sessionTime: "11:00:00" }] },
     "/challenges/1": { challenges, openChallengesCount: 4, maxOpenChallenges: 5, collaboratorUsers: people, worlds },
     "/growth/1": {
       intro: { title: "Mijn jaar in beeld", description: "Wat waren mijn leermomenten van het afgelopen jaar en wat zeggen die over mijn groei?" },
@@ -95,7 +95,15 @@
         favorite: { worldId: 1, shortName: "Wetenschappelijk", name: "Wetenschappelijke wereld" }
       }
     },
-    "/notion/1": { notes: [] }
+    "/notion/1": { notes: [] },
+    "/sessions/1": {
+      sessions: [
+        { sessionId: 1, title: "Politieke partijen", description: "Nederland heeft veel politieke partijen. Waar staan ze voor en hoe kies je?", imageUrl: null, sessionDate: wk(2), sessionTime: "11:00:00", organizers: [{ name: "Mevrouw De Vries" }], maxParticipants: 15, bringItems: "Pen, schrift en laptop", registrationCount: 14, isRegistered: true, canRegister: false, canUnregister: false, isPast: false, canReflect: false, reflectionAnswers: null },
+        { sessionId: 2, title: "Bijen houden", description: "Een imker vertelt over het leven in een bijenkast. Je mag zelf honing proeven.", imageUrl: null, sessionDate: wk(8), sessionTime: "13:30:00", organizers: [{ name: "Imkersvereniging" }], maxParticipants: 20, bringItems: "", registrationCount: 6, isRegistered: false, canRegister: true, canUnregister: false, isPast: false, canReflect: false, reflectionAnswers: null },
+        { sessionId: 3, title: "Stop-motion film", description: "Maak in twee uur je eigen korte film met klei en een telefoon.", imageUrl: null, sessionDate: wk(-6), sessionTime: "10:00:00", organizers: [{ name: "Meneer Bakker" }], maxParticipants: 12, bringItems: "Telefoon", registrationCount: 12, isRegistered: true, canRegister: false, canUnregister: false, isPast: true, canReflect: true, reflectionAnswers: null }
+      ],
+      reflectionQuestions: []
+    }
   };
 
   window.fetch = async url => {

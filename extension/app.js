@@ -147,7 +147,8 @@
     checkin: uid => `/checkin/${uid}`,
     challenges: uid => `/challenges/${uid}`,
     notes: uid => `/notion/${uid}`,
-    growth: uid => `/growth/${uid}`
+    growth: uid => `/growth/${uid}`,
+    sessions: uid => `/sessions/${uid}`
   };
 
   async function ensure(key, force) {
@@ -161,14 +162,18 @@
 
   function needsFor(view) {
     return {
-      dashboard: ["checkin", "challenges", "growth"],
+      dashboard: ["checkin", "challenges", "growth", ...(showSessions() ? ["sessions"] : [])],
       checkin: ["checkin"],
       checkout: ["checkin"],
       challenges: ["challenges", "checkin"],
       notes: ["notes"],
-      growth: ["growth"]
+      growth: ["growth"],
+      sessions: ["sessions"]
     }[view] || [];
   }
+
+  // Inspiratiesessies zijn niet op elke school in gebruik, dus ze staan achter een instelling
+  const showSessions = () => !S.settings.hideSessions;
 
   /* ---------- Shadow root ---------- */
 
@@ -336,6 +341,7 @@
     { id: "challenges", label: "Challenges", icon: "target" },
     { id: "notes", label: "Ideeën", icon: "book" },
     { id: "growth", label: "Groei in beeld", icon: "trend" },
+    { id: "sessions", label: "Inspiratiesessies", icon: "spark" },
     { id: "chat", label: "Chat", icon: "chat", group: "Samen" }
   ];
 
@@ -345,6 +351,7 @@
     checkout: () => ["Check-out", "Kijk aan het eind van de dag terug op je taken"],
     challenges: () => ["Challenges", "Al je projecten op één plek"],
     notes: () => ["Ideeën", "Verzamel inspiratie voor nieuwe challenges"],
+    sessions: () => ["Inspiratiesessies", "Meld je aan en kijk terug op sessies"],
     growth: () => ["Groei in beeld", "Jouw ontwikkeling in kernwaarden en werelden"],
     chat: () => ["Chat", "Praat veilig met je klasgenoten"]
   };
@@ -360,12 +367,13 @@
     const [title, sub] = (TITLES[S.view] || TITLES.dashboard)();
     const activeCount = (S.data.challenges?.challenges || []).filter(c => !has(c.endChallengeDate)).length;
 
-    const shellKey = [S.view, S.settings.layout, S.settings.sidebarCompact, activeCount, S.user?.name, S.ui.room].join("|");
+    if (S.view === "sessions" && !showSessions()) S.view = "dashboard";
+    const shellKey = [S.view, showSessions(), S.settings.layout, S.settings.sidebarCompact, activeCount, S.user?.name, S.ui.room].join("|");
     const side = `
       <aside class="side">
         <div class="brand"><img class="logo-img" src="${LOGO}" alt=""><span>MyLearnQ<b>+</b></span></div>
         <nav class="nav">
-          ${NAV.map(n => `${n.group ? `<div class="nav-label">${n.group}</div>` : ""}<button data-nav="${n.id}" class="${S.view === n.id ? "active" : ""}" title="${n.label}">${icon(n.icon, 18)}<span>${n.label}</span>${navBadge(n.id, activeCount)}</button>`).join("")}
+          ${NAV.filter(n => n.id !== "sessions" || showSessions()).map(n => `${n.group ? `<div class="nav-label">${n.group}</div>` : ""}<button data-nav="${n.id}" class="${S.view === n.id ? "active" : ""}" title="${n.label}">${icon(n.icon, 18)}<span>${n.label}</span>${navBadge(n.id, activeCount)}</button>`).join("")}
         </nav>
         <div class="side-foot nav">
           <button data-act="customize" title="Instellingen">${icon("sliders", 18)}<span>Instellingen</span></button>
@@ -468,6 +476,7 @@
         case "challenges": return S.ui.chDetail ? challengeDetail() : challengesView();
         case "notes": return notesView();
         case "growth": return growthView();
+        case "sessions": return sessionsView();
         case "chat": return chatView();
         default: return dashboardView();
       }
@@ -578,9 +587,10 @@
       challenges: () => widgetChallenges(active),
       growth: () => widgetGrowth(),
       worlds: () => widgetWorlds(),
-      quick: () => widgetQuick()
+      quick: () => widgetQuick(),
+      sessions: () => showSessions() ? widgetSessions() : ""
     };
-    const sizes = { today: "w-7", streak: "w-5", challenges: "w-7", growth: "w-5", worlds: "w-5", quick: "w-7" };
+    const sizes = { today: "w-7", streak: "w-5", challenges: "w-7", growth: "w-5", worlds: "w-5", quick: "w-7", sessions: "w-5" };
     const order = normalizedWidgets().filter(w => w.on);
     const cards = order.map(w => { const html = W[w.id]?.(); return html ? `<div class="${sizes[w.id]}">${html}</div>` : ""; }).join("");
 
@@ -724,6 +734,7 @@
       return `<div class="card day ${isToday ? "today" : ""} ${ci ? "clickable" : ""}" ${ci ? `data-ci="${day}"` : ""}>
         <div class="day-h"><div><div class="w">${fmt(day, { weekday: "long" })}</div><div class="n">${parse(day).getDate()}</div></div>${status}</div>
         ${items.length ? `<div class="mini">${items.map(it => `<div><b>${it.blockNumber ?? ""}</b> ${esc(it.description || "")}${it.estimatedDuration ? ` <span class="faint">· ${mins(it.estimatedDuration)}</span>` : ""}</div>`).join("")}</div>` : ""}
+        ${sessionsOn(day).map(x => `<div class="sess-chip" title="Inspiratiesessie">${icon("spark", 12)} ${esc(x.title)}${has(x.sessionTime) ? ` <span class="faint">${esc(String(x.sessionTime).slice(0, 5))}</span>` : ""}</div>`).join("")}
         ${ci?.yesterdayReflection ? `<div class="q">${esc(ci.yesterdayReflection)}</div>` : ""}
         ${!ci ? `<div class="empty" style="padding:18px 0;margin:auto 0;font-size:12.5px">${day > t ? "Nog niet gepland" : "Geen check-in"}</div>` : ""}
         ${ciActions(day) ? `<div class="day-f">${ciActions(day)}</div>` : ""}
@@ -1302,6 +1313,86 @@
     return intro + (cards ? `<div class="grid cols-auto">${cards}</div>` : "") + `<div class="grid dash"><div class="w-7">${worlds}</div><div class="w-5">${notes}</div></div>`;
   }
 
+  /* ---------- Inspiratiesessies ---------- */
+
+  // Sessies waarvoor je bent aangemeld op een dag, uit de check-in of de sessiepagina
+  function sessionsOn(day) {
+    if (!showSessions()) return [];
+    const list = S.data.checkin?.registeredSessions || (S.data.sessions?.sessions || []).filter(x => x.isRegistered);
+    const byDate = S.data.checkin?.sessionsByDate || {};
+    return list
+      .map(x => ({ ...x, ...(x.session || {}) }))
+      .filter(x => x.sessionDate === day)
+      .map(x => {
+        const named = byDate[day];
+        const title = x.title || x.sessionTitle || (typeof named === "string" ? named : named?.title || named?.[0]?.title) || "Inspiratiesessie";
+        return { ...x, title };
+      });
+  }
+
+  const sessionWhen = x => `${fmt(x.sessionDate, { weekday: "long", day: "numeric", month: "long" })}${has(x.sessionTime) ? ", " + String(x.sessionTime).slice(0, 5) : ""}`;
+  const sessionOrder = (a, b) => (a.sessionDate + (a.sessionTime || "")).localeCompare(b.sessionDate + (b.sessionTime || ""));
+
+  function sessionStatus(x) {
+    if (x.isRegistered && x.isPast) return x.canReflect && !x.reflectionAnswers ? `<span class="pill warn"><i class="dot"></i>Reflectie invullen</span>` : `<span class="pill ok">${icon("check", 12)}Bijgewoond</span>`;
+    if (x.isRegistered) return `<span class="pill ok">${icon("check", 12)}Aangemeld</span>`;
+    if (x.isPast) return `<span class="pill">Geweest</span>`;
+    if (x.maxParticipants && x.registrationCount >= x.maxParticipants) return `<span class="pill bad">Vol</span>`;
+    return x.canRegister ? `<span class="pill acc">Aanmelden kan</span>` : "";
+  }
+
+  function sessionsView() {
+    const d = S.data.sessions;
+    if (d?._error) return errorCard(d._error);
+    const all = (d?.sessions || []).slice().sort(sessionOrder);
+    const upcoming = all.filter(x => !x.isPast);
+    const mine = all.filter(x => x.isRegistered);
+    const past = all.filter(x => x.isPast).reverse();
+    const f = S.ui.sessFilter || "upcoming";
+    const list = f === "mine" ? mine : f === "past" ? past : upcoming;
+
+    const head = `<div class="toolbar">
+      <div class="seg">
+        <button data-sessf="upcoming" class="${f === "upcoming" ? "active" : ""}">Komend<span class="n">${upcoming.length}</span></button>
+        <button data-sessf="mine" class="${f === "mine" ? "active" : ""}">Aangemeld<span class="n">${mine.length}</span></button>
+        <button data-sessf="past" class="${f === "past" ? "active" : ""}">Geweest<span class="n">${past.length}</span></button>
+      </div>
+      <div class="grow"></div>
+      <button class="btn primary" data-panel="sessions">${icon("edit", 16)}Aanmelden of reflecteren</button>
+    </div>`;
+    const none = { mine: "Je bent nog niet aangemeld voor een sessie.", past: "Nog geen sessies geweest.", upcoming: "Er staan nu geen sessies gepland." };
+    if (!list.length) return head + `<div class="card"><div class="empty" style="padding:60px 16px"><div class="big">${icon("spark", 26)}</div>${none[f]}</div></div>`;
+
+    return head + `<div class="grid cols-auto">${list.map(x => {
+      const spots = x.maxParticipants ? `${x.registrationCount ?? 0} van ${x.maxParticipants} plekken` : `${x.registrationCount ?? 0} aangemeld`;
+      const orgs = (x.organizers || []).map(o => o.name).filter(Boolean).join(", ");
+      return `<article class="card sess clickable" data-panel="sessions">
+        ${x.imageUrl ? `<div class="sess-img" style="background-image:url('${esc(x.imageUrl)}')"></div>` : ""}
+        <div style="display:flex;gap:10px;align-items:flex-start"><h3 style="flex:1">${esc(x.title)}</h3>${sessionStatus(x)}</div>
+        <div class="meta"><span>${icon("calendar", 13)} <span class="cap">${esc(sessionWhen(x))}</span></span><span>${icon("users", 13)} ${spots}</span></div>
+        ${has(x.description) ? `<p class="lq">${esc(x.description)}</p>` : ""}
+        ${orgs || has(x.bringItems) ? `<div class="kv" style="font-size:12.5px">
+          ${orgs ? `<div class="row"><span class="muted">Door</span><b>${esc(orgs)}</b></div>` : ""}
+          ${has(x.bringItems) ? `<div class="row"><span class="muted">Meenemen</span><b>${esc(x.bringItems)}</b></div>` : ""}</div>` : ""}
+      </article>`;
+    }).join("")}</div>`;
+  }
+
+  function widgetSessions() {
+    const d = S.data.sessions;
+    if (!d || d._error) return "";
+    const next = (d.sessions || []).filter(x => x.isRegistered && !x.isPast).sort(sessionOrder)[0];
+    const open = (d.sessions || []).filter(x => !x.isPast && x.canRegister).length;
+    return `<section class="card">
+      <div class="card-h"><h2>Inspiratiesessie</h2><button class="btn sm ghost more" data-nav="sessions">Alles ${icon("right", 14)}</button></div>
+      ${next ? `<div class="item clickable" data-nav="sessions" style="flex-direction:column;gap:4px">
+          <b>${esc(next.title)}</b>
+          <div class="meta"><span>${icon("calendar", 13)} <span class="cap">${esc(sessionWhen(next))}</span></span>${has(next.bringItems) ? `<span>Meenemen: ${esc(next.bringItems)}</span>` : ""}</div></div>`
+        : `<div class="empty" style="padding:18px">Je bent nog niet aangemeld voor een sessie.</div>`}
+      ${open ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">${open === 1 ? "Er is 1 sessie" : "Er zijn " + open + " sessies"} waarvoor je je nog kunt aanmelden.</p>` : ""}
+    </section>`;
+  }
+
   function errorCard(msg) {
     return `<div class="card"><div class="empty"><div class="big">${icon("x", 24)}</div>Kon gegevens niet laden (${esc(msg)}).<button class="btn" data-act="refresh">${icon("refresh", 16)}Opnieuw proberen</button></div></div>`;
   }
@@ -1579,7 +1670,7 @@
     return "";
   }
 
-  const PANEL_TITLES = { checkin: "Check-in", challenges: "Challenges", notes: "Ideeën", growth: "Groei in beeld" };
+  const PANEL_TITLES = { checkin: "Check-in", challenges: "Challenges", notes: "Ideeën", growth: "Groei in beeld", sessions: "Inspiratiesessies" };
 
   const SET_TABS = [
     ["looks", "Looks"], ["colors", "Kleuren"], ["background", "Achtergrond"], ["shape", "Vorm"],
@@ -1750,7 +1841,7 @@
   }
 
   app.addEventListener("click", e => {
-    const el = e.target.closest("[data-nav],[data-act],[data-panel],[data-ch],[data-ci],[data-chf],[data-set],[data-wmove],[data-room],[data-ciform],[data-cikind],[data-cich],[data-cidur],[data-ciblock],[data-cidel],[data-ciitem],[data-look],[data-settab]");
+    const el = e.target.closest("[data-nav],[data-act],[data-panel],[data-ch],[data-ci],[data-chf],[data-set],[data-wmove],[data-room],[data-ciform],[data-cikind],[data-cich],[data-cidur],[data-ciblock],[data-cidel],[data-ciitem],[data-look],[data-settab],[data-sessf]");
     if (!el || !app.contains(el)) return;
     const ds = el.dataset;
 
@@ -1765,6 +1856,7 @@
     if (ds.ch) { S.view = "challenges"; S.ui.chDetail = Number(ds.ch); return render(); }
     if (ds.ci) { S.ui.drawer = { type: "ci", date: ds.ci }; return render(); }
     if (ds.chf) { S.ui.chFilter = ds.chf; return render(); }
+    if (ds.sessf) { S.ui.sessFilter = ds.sessf; return render(); }
     if (ds.room) { S.ui.room = ds.room; LQChat.markRead(ds.room); return render(); }
     if (ds.act && ds.act.startsWith("chat") || ds.act === "copyInvite") return chatAction(ds.act, el);
     if (ds.set) return save({ [ds.set]: ds.val });
