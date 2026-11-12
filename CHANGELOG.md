@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.0 (12 november 2026)
+
+- Challenges bewerk je nu direct in de nieuwe UI: titel, leervraag, pitch, deelvragen, werelden en vensters. Bronnen, voorkennis, voetafdruk en eindproduct blijven ongewijzigd.
+- Een nieuwe challenge maak je ook direct aan, zonder het oude formulier.
+- Inspiratiesessies: aanmelden, afmelden en je reflectie invullen gaat nu met knoppen op de sessiekaart.
+- Chat: een nieuwe groep krijgt een code van 6 letters in plaats van een lange uitnodiging. Je kopieert alleen de code, of zegt hem gewoon hardop. Groepen met een oude code blijven werken.
+
 ## 1.6.0 (2 november 2026)
 
 - Inspiratiesessies terug in de nieuwe UI: een eigen pagina (komend, aangemeld en geweest), een blok op het overzicht en je sessie in de check-inweek.

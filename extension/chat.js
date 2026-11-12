@@ -47,20 +47,36 @@ const LQChat = (() => {
 
   const normalizeCode = c => String(c || "").toUpperCase().replace(/[^A-Z2-7]/g, "");
 
-  // Kamercode: 20 tekens base32 = 100 bits willekeur
+  // Kamercode: 6 letters, makkelijk om hardop te zeggen. Zonder I en O,
+  // zodat niemand ze met een 1 of 0 verwart. Oudere groepen hebben nog een
+  // code van 20 tekens; die blijven gewoon werken.
+  const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const CODE_LEN = 6;
   function newCode() {
-    const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    const r = crypto.getRandomValues(new Uint8Array(20));
-    return [...r].map(x => A[x & 31]).join("");
+    const out = [];
+    while (out.length < CODE_LEN) {
+      const [x] = crypto.getRandomValues(new Uint8Array(1));
+      if (x < 240) out.push(LETTERS[x % 24]); // geen voorkeur voor bepaalde letters
+    }
+    return out.join("");
   }
-  const prettyCode = c => normalizeCode(c).match(/.{1,4}/g)?.join(" ") || "";
+  const validCode = c => c.length === CODE_LEN || c.length === 20;
+  const prettyCode = c => { c = normalizeCode(c); return c.length === CODE_LEN ? c : c.match(/.{1,4}/g)?.join(" ") || ""; };
+
+  // Een korte code heeft weinig mogelijkheden. Daarom is ook het kanaal op de
+  // relay traag afgeleid, zodat wie de kanaalnaam ziet de code niet snel terugvindt.
+  async function slowTopic(code) {
+    const base = await subtle.importKey("raw", te.encode(code), "PBKDF2", false, ["deriveBits"]);
+    const bits = await subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: te.encode("lq-topic|" + APP_SECRET), iterations: ITER }, base, 160);
+    return "lqc_" + hex(bits);
+  }
 
   const roomCache = {};
   async function roomInfo(code) {
     code = normalizeCode(code);
     if (roomCache[code]) return roomCache[code];
     const id = hex(await sha256("lq-room-id|" + code)).slice(0, 24);
-    const topic = "lqc_" + hex(await sha256("lq-topic|" + APP_SECRET + "|" + code)).slice(0, 40);
+    const topic = code.length === CODE_LEN ? await slowTopic(code) : "lqc_" + hex(await sha256("lq-topic|" + APP_SECRET + "|" + code)).slice(0, 40);
     const key = await deriveAes(code, "mylearnq-plus|room|" + id);
     return (roomCache[code] = { id, topic, key });
   }
@@ -206,10 +222,10 @@ const LQChat = (() => {
 
   async function joinRoom(code, label) {
     code = normalizeCode(code);
-    if (code.length !== 20) throw new Error("Deze code klopt niet. Plak de hele uitnodiging, of een code van 20 tekens.");
+    if (!validCode(code)) throw new Error("Deze code klopt niet. Een code bestaat uit 6 letters.");
     const info = await roomInfo(code);
     if (S.rooms.some(r => r.id === info.id)) return info.id;
-    const r = await loadRoom({ code, label: label || "Groep " + code.slice(0, 4), joinedAt: Date.now(), lastRead: Date.now() });
+    const r = await loadRoom({ code, label: label || "Groep " + code.slice(0, 6), joinedAt: Date.now(), lastRead: Date.now() });
     S.rooms.push(r);
     await saveRooms();
     subscribe(r);
@@ -270,7 +286,7 @@ const LQChat = (() => {
   };
 
   return {
-    init, joinRoom, createRoom, leaveRoom, renameRoom, send, markRead, unread, prettyCode,
+    init, joinRoom, createRoom, leaveRoom, renameRoom, send, markRead, unread, prettyCode, normalizeCode,
     get rooms() { return S.rooms; },
     messages: id => S.msgs[id] || [],
     rejected: id => S.rejected[id] || [],

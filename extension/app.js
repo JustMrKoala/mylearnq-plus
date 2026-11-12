@@ -1,7 +1,7 @@
 // LearnQ+ : een volledig nieuwe interface voor MyLearnQ.
 // De originele SvelteKit app blijft onzichtbaar draaien (voor inloggen en sessies).
 // Gegevens komen uit dezelfde __data.json endpoints die de site zelf gebruikt.
-// Bewerken gebeurt in het originele formulier, geopend in een paneel.
+// Opslaan gaat via dezelfde formulieracties die de site zelf gebruikt.
 (() => {
   if (window !== window.top) return;
   if (/^\/(login|auth|logout)/.test(location.pathname)) return;
@@ -441,6 +441,7 @@
     if (!dr) return null;
     if (dr.type === "ci") return "ci:" + dr.date + ":" + !!S.data.checkin;
     if (dr.type === "ciForm") return "ciForm:" + S.ui.form?.v + ":" + !!S.data.checkin;
+    if (dr.type === "chEdit" || dr.type === "sessRefl") return dr.type + ":" + S.ui.ed?.v;
     if (dr.type === "settings") return ["settings", S.panelOnly, S.ui.setTab, JSON.stringify(S.settings), local.bgImage.length, local.customCss.length, local.classicCss.length].join(":");
     if (dr.type === "panel") return "panel:" + dr.route;
     if (dr.type === "chatInfo") return "chatInfo:" + dr.id + ":" + LQChat.messages(dr.id).length;
@@ -698,7 +699,7 @@
       <div class="card-h"><h2>Snel naar</h2></div>
       <div class="quick">
         <button data-ciform="${nextSchoolDay()}">${icon("calendar", 20)}<div>Check-in<small>Plan je dag</small></div></button>
-        <button data-panel="challenges" ${full ? 'title="Je hebt het maximum aantal open challenges"' : ""}>${icon("plus", 20)}<div>Challenge<small>${full ? "Maximum bereikt" : "Start iets nieuws"}</small></div></button>
+        <button data-act="chNew" ${full ? 'title="Je hebt het maximum aantal open challenges"' : ""}>${icon("plus", 20)}<div>Challenge<small>${full ? "Maximum bereikt" : "Start iets nieuws"}</small></div></button>
         <button data-panel="notes">${icon("book", 20)}<div>Idee<small>Schrijf het op</small></div></button>
         <button data-panel="growth">${icon("trend", 20)}<div>Reflectie<small>Jouw groei</small></div></button>
       </div>
@@ -1053,10 +1054,10 @@
   function fail(msg) { S.ui.form.error = msg; bumpForm(); return false; }
 
   // Zelfde acties als het formulier van MyLearnQ zelf (SvelteKit form actions)
-  async function postAction(name, fields) {
+  async function postAction(name, fields, path = `/checkin/${S.uid}`) {
     const fd = new FormData();
     for (const [k, v] of Object.entries(fields)) fd.append(k, typeof v === "string" ? v : JSON.stringify(v));
-    const r = await fetch(`/checkin/${S.uid}?/${name}`, {
+    const r = await fetch(`${path}?/${name}`, {
       method: "POST", body: fd, credentials: "same-origin",
       headers: { accept: "application/json", "x-sveltekit-action": "true" }
     });
@@ -1162,7 +1163,7 @@
       <label class="input">${icon("search", 16)}<input id="chq" placeholder="Zoek in challenges" value="${esc(S.ui.chQuery)}"></label>
       <div class="grow"></div>
       <span class="muted" style="font-size:12.5px">${d?.openChallengesCount ?? active.length} van ${d?.maxOpenChallenges ?? "?"} open</span>
-      <button class="btn primary" data-panel="challenges" ${full ? 'title="Je hebt het maximum aantal open challenges bereikt"' : ""}>${icon("plus", 16)}Nieuwe challenge</button>
+      <button class="btn primary" data-act="chNew" ${full ? 'title="Je hebt het maximum aantal open challenges bereikt"' : ""}>${icon("plus", 16)}Nieuwe challenge</button>
     </div>`;
 
     if (!list.length) return head + `<div class="card"><div class="empty"><div class="big">${icon("target", 26)}</div>${q ? "Geen challenges gevonden." : "Nog geen challenges in deze lijst."}</div></div>`;
@@ -1212,7 +1213,7 @@
 
     return `
       <div class="toolbar"><button class="btn ghost" data-act="chBack">${icon("left", 16)}Terug naar challenges</button><div class="grow"></div>
-        <button class="btn primary" data-panel="challenges">${icon("edit", 16)}Bewerken in MyLearnQ</button></div>
+        <button class="btn primary" data-act="chEdit" data-id="${c.challengeId}">${icon("edit", 16)}Bewerken</button></div>
       <section class="card">
         <div class="detail-h"><div style="flex:1">
           <span class="pill ${ph.idx === 3 ? "ok" : "acc"}">${ph.label}</span>
@@ -1357,8 +1358,6 @@
         <button data-sessf="mine" class="${f === "mine" ? "active" : ""}">Aangemeld<span class="n">${mine.length}</span></button>
         <button data-sessf="past" class="${f === "past" ? "active" : ""}">Geweest<span class="n">${past.length}</span></button>
       </div>
-      <div class="grow"></div>
-      <button class="btn primary" data-panel="sessions">${icon("edit", 16)}Aanmelden of reflecteren</button>
     </div>`;
     const none = { mine: "Je bent nog niet aangemeld voor een sessie.", past: "Nog geen sessies geweest.", upcoming: "Er staan nu geen sessies gepland." };
     if (!list.length) return head + `<div class="card"><div class="empty" style="padding:60px 16px"><div class="big">${icon("spark", 26)}</div>${none[f]}</div></div>`;
@@ -1366,7 +1365,8 @@
     return head + `<div class="grid cols-auto">${list.map(x => {
       const spots = x.maxParticipants ? `${x.registrationCount ?? 0} van ${x.maxParticipants} plekken` : `${x.registrationCount ?? 0} aangemeld`;
       const orgs = (x.organizers || []).map(o => o.name).filter(Boolean).join(", ");
-      return `<article class="card sess clickable" data-panel="sessions">
+      const acts = sessionActions(x);
+      return `<article class="card sess">
         ${x.imageUrl ? `<div class="sess-img" style="background-image:url('${esc(x.imageUrl)}')"></div>` : ""}
         <div style="display:flex;gap:10px;align-items:flex-start"><h3 style="flex:1">${esc(x.title)}</h3>${sessionStatus(x)}</div>
         <div class="meta"><span>${icon("calendar", 13)} <span class="cap">${esc(sessionWhen(x))}</span></span><span>${icon("users", 13)} ${spots}</span></div>
@@ -1374,6 +1374,7 @@
         ${orgs || has(x.bringItems) ? `<div class="kv" style="font-size:12.5px">
           ${orgs ? `<div class="row"><span class="muted">Door</span><b>${esc(orgs)}</b></div>` : ""}
           ${has(x.bringItems) ? `<div class="row"><span class="muted">Meenemen</span><b>${esc(x.bringItems)}</b></div>` : ""}</div>` : ""}
+        ${acts ? `<div class="btns sess-acts">${acts}</div>` : ""}
       </article>`;
     }).join("")}</div>`;
   }
@@ -1391,6 +1392,231 @@
         : `<div class="empty" style="padding:18px">Je bent nog niet aangemeld voor een sessie.</div>`}
       ${open ? `<p class="muted" style="margin:10px 0 0;font-size:12.5px">${open === 1 ? "Er is 1 sessie" : "Er zijn " + open + " sessies"} waarvoor je je nog kunt aanmelden.</p>` : ""}
     </section>`;
+  }
+
+  // Knoppen op een sessiekaart, met dezelfde regels als de site zelf
+  function sessionActions(x) {
+    const busy = S.ui.sessBusy === x.sessionId ? "disabled" : "";
+    const qs = S.data.sessions?.reflectionQuestions || [];
+    if (x.canReflect && qs.length) return `<button class="btn sm primary" data-act="sessReflect" data-id="${x.sessionId}">${icon("edit", 14)}${x.reflectionAnswers ? "Reflectie aanpassen" : "Reflectie invullen"}</button>`;
+    if (x.isRegistered) return x.canUnregister ? `<button class="btn sm" data-act="sessUnregister" data-id="${x.sessionId}" ${busy}>${busy ? "Bezig" : "Afmelden"}</button>` : "";
+    if (!x.canRegister) return "";
+    if (x.maxParticipants && x.registrationCount >= x.maxParticipants) return "";
+    return `<button class="btn sm primary" data-act="sessRegister" data-id="${x.sessionId}" ${busy}>${busy ? "Bezig" : icon("plus", 14) + "Aanmelden"}</button>`;
+  }
+
+  async function sessionAction(name, id) {
+    const x = (S.data.sessions?.sessions || []).find(s => s.sessionId === id);
+    if (!x || S.ui.sessBusy) return;
+    if (name === "unregister" && !confirm(`Afmelden voor "${x.title}"?`)) return;
+    S.ui.sessBusy = id;
+    render();
+    try {
+      await postAction(name, { sessionId: String(id) }, `/sessions/${S.uid}`);
+      await ensure("sessions", true);
+      if (S.data.checkin) ensure("checkin", true);
+      toast(name === "register" ? "Aangemeld voor " + x.title : "Afgemeld voor " + x.title);
+    } catch (e) {
+      if (e instanceof AuthError) { S.error = "auth"; return render(); }
+      toast(e.message || "Dat lukte niet");
+    } finally {
+      S.ui.sessBusy = null;
+      render();
+    }
+  }
+
+  function openReflection(id) {
+    const x = (S.data.sessions?.sessions || []).find(s => s.sessionId === id);
+    if (!x) return;
+    const answers = {};
+    for (const a of x.reflectionAnswers?.answers || []) answers[a.questionKey] = a.answer;
+    S.ui.ed = { kind: "reflect", sessionId: id, answers, v: 0, saving: false, error: "", dirty: false, missing: [] };
+    S.ui.drawer = { type: "sessRefl" };
+    render();
+  }
+
+  function reflectionDrawer() {
+    const ed = S.ui.ed;
+    const x = (S.data.sessions?.sessions || []).find(s => s.sessionId === ed?.sessionId);
+    if (!ed || !x) return "";
+    const qs = S.data.sessions?.reflectionQuestions || [];
+    const body = `<p class="muted" style="margin:0 0 16px"><span class="cap">${esc(sessionWhen(x))}</span></p>
+      ${qs.map((q, i) => {
+        const req = q.isRequired || i === 0;
+        return `<div class="field ${ed.missing.includes(q.key) ? "bad" : ""}"><label for="refl-${esc(q.key)}">${esc(q.label)}${req ? ` <span class="req">*</span>` : ""}</label>
+          <textarea id="refl-${esc(q.key)}" data-refl="${esc(q.key)}" rows="3">${esc(ed.answers[q.key] || "")}</textarea></div>`;
+      }).join("")}
+      ${edFoot(ed, "sessReflSave", "Reflectie opslaan")}`;
+    return drawer("Reflectie: " + x.title, body);
+  }
+
+  async function saveReflection() {
+    const ed = S.ui.ed;
+    if (!ed || ed.saving) return;
+    const qs = S.data.sessions?.reflectionQuestions || [];
+    ed.missing = qs.filter((q, i) => (q.isRequired || i === 0) && !String(ed.answers[q.key] || "").trim()).map(q => q.key);
+    if (ed.missing.length) return edFail("Vul alle verplichte vragen in.");
+    const answers = { answers: Object.entries(ed.answers).map(([questionKey, answer]) => ({ questionKey, answer })), completedAt: new Date().toISOString() };
+    await edRun(() => postAction("saveReflection", { sessionId: String(ed.sessionId), answers }, `/sessions/${S.uid}`), async () => {
+      await ensure("sessions", true);
+      toast("Reflectie opgeslagen");
+    });
+  }
+
+  /* ---------- Challenge bewerken ---------- */
+
+  const newSubQ = () => ({ id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`, text: "" });
+
+  function fillEd(ed, c) {
+    ed.title = c?.title || "";
+    ed.pitch = c?.pitch || "";
+    ed.learningQuestion = c?.learningQuestion || "";
+    ed.subQuestions = (c?.subQuestions || []).map(q => ({ ...q, text: q.text || "" }));
+    ed.worlds = [...(c?.worlds || [])];
+    ed.perspectives = [...(c?.perspectives || [])];
+    if (!ed.subQuestions.length) ed.subQuestions.push(newSubQ());
+  }
+
+  // Bij bewerken halen we eerst de volledige challenge op, zodat onderdelen die
+  // hier niet te zien zijn (bronnen, voetafdruk, eindproduct) ongewijzigd blijven
+  async function openChEdit(id) {
+    const c = id ? (S.data.challenges?.challenges || []).find(x => x.challengeId === id) : null;
+    const ed = { kind: "challenge", id: id || null, v: 0, loading: !!id, saving: false, error: "", dirty: false, base: null };
+    fillEd(ed, c);
+    S.ui.ed = ed;
+    S.ui.drawer = { type: "chEdit" };
+    render();
+    if (!id) return;
+    try {
+      const d = await fetchRoute(`/challenges/preparation/edit/${id}`);
+      if (S.ui.ed !== ed) return;
+      if (!d.challenge) throw new Error("geen challenge gevonden");
+      ed.base = d.challenge;
+      if (!ed.dirty) fillEd(ed, d.challenge);
+    } catch (e) {
+      if (e instanceof AuthError) { S.error = "auth"; return render(); }
+      if (S.ui.ed !== ed) return;
+      ed.error = "Kon de challenge niet ophalen, dus opslaan kan nu niet (" + (e.message || e) + ").";
+    }
+    ed.loading = false;
+    bumpEd();
+  }
+
+  function chEditDrawer() {
+    const ed = S.ui.ed;
+    if (!ed) return "";
+    const worlds = S.data.challenges?.worlds || S.data.checkin?.worlds || [];
+    const chosen = worlds.filter(w => ed.worlds.includes(w.id));
+    const persp = (chosen.length ? chosen : worlds).flatMap(w => w.perspectives || []);
+    const body = `
+      ${ed.loading ? `<p class="note" style="margin:0 0 16px">De nieuwste versie wordt opgehaald.</p>` : ""}
+      <div class="field"><label for="ed-title">Titel <span class="req">*</span></label>
+        <input id="ed-title" data-ed="title" value="${esc(ed.title)}" maxlength="200"></div>
+      <div class="field"><label for="ed-lq">Leervraag</label>
+        <textarea id="ed-lq" data-ed="learningQuestion" rows="2">${esc(ed.learningQuestion)}</textarea></div>
+      <div class="field"><label for="ed-pitch">Pitch</label>
+        <textarea id="ed-pitch" data-ed="pitch" rows="4">${esc(ed.pitch)}</textarea></div>
+      <div class="field"><label>Deelvragen</label>
+        <div class="subq">${ed.subQuestions.map((q, i) => `<div class="subq-row"><span class="blk">${i + 1}</span>
+          <input data-edsq="${i}" value="${esc(q.text)}" placeholder="Schrijf een deelvraag">
+          <button class="btn ghost icon sm" data-act="edSqDel" data-i="${i}" title="Verwijderen">${icon("x", 14)}</button></div>`).join("")}</div>
+        <button class="btn sm ghost" data-act="edSqAdd" style="align-self:flex-start;margin-top:6px">${icon("plus", 14)}Deelvraag toevoegen</button></div>
+      ${worlds.length ? `<div class="field"><label>Werelden</label>
+        <div class="chips pickable">${worlds.map(w => `<button class="chip ${ed.worlds.includes(w.id) ? "on" : ""}" style="--c:${WORLD_COLORS[w.id] || "#888"}" data-edw="${w.id}">${esc(w.shortName || w.name)}</button>`).join("")}</div></div>` : ""}
+      ${persp.length ? `<div class="field"><label>Vensters</label>
+        <div class="chips pickable">${persp.map(p => `<button class="chip ${ed.perspectives.includes(p.id) ? "on" : ""}" style="--c:${p.color || "#888"}" data-edp="${p.id}">${esc(p.title)}</button>`).join("")}</div></div>` : ""}
+      <p class="muted" style="font-size:12.5px;margin:4px 0 0">Bronnen, voorkennis, voetafdruk en eindproduct blijven zoals ze zijn.</p>
+      ${edFoot(ed, "edSave", ed.id ? "Opslaan" : "Challenge aanmaken", ed.loading || (ed.id && !ed.base))}`;
+    return drawer(ed.id ? "Challenge bewerken" : "Nieuwe challenge", body);
+  }
+
+  function edFoot(ed, act, label, off) {
+    return `<div class="form-foot">
+        ${ed.error ? `<p class="err">${esc(ed.error)}</p>` : ""}
+        <div class="btns">
+          <button class="btn ghost" data-act="closeDrawer">Annuleren</button>
+          <button class="btn primary" data-act="${act}" ${ed.saving || off ? "disabled" : ""}>${ed.saving ? "Bezig met opslaan" : label}</button>
+        </div>
+      </div>`;
+  }
+
+  // Het formulier in de open lade, als die er een heeft
+  function openForm() {
+    const t = S.ui.drawer?.type;
+    return t === "ciForm" ? S.ui.form : t === "chEdit" || t === "sessRefl" ? S.ui.ed : null;
+  }
+
+  function bumpEd() { if (S.ui.ed) S.ui.ed.v++; render(); }
+  function edFail(msg) { S.ui.ed.error = msg; bumpEd(); return false; }
+
+  async function edRun(work, after) {
+    const ed = S.ui.ed;
+    ed.saving = true;
+    ed.error = "";
+    bumpEd();
+    try {
+      await work();
+      S.ui.ed = null;
+      S.ui.drawer = null;
+      render();
+      await after();
+    } catch (e) {
+      if (e instanceof AuthError) { S.error = "auth"; return render(); }
+      ed.saving = false;
+      edFail(e.message || "Opslaan mislukt");
+    }
+  }
+
+  async function saveChallenge() {
+    const ed = S.ui.ed;
+    if (!ed || ed.saving || ed.loading) return;
+    if (!ed.title.trim()) return edFail("Geef je challenge een titel.");
+    const b = ed.base || {};
+    const bool = v => String(!!v);
+    const fields = {
+      title: ed.title.trim(),
+      pitch: ed.pitch,
+      learningQuestion: ed.learningQuestion.trim(),
+      perspectives: ed.perspectives,
+      subQuestions: ed.subQuestions.map(q => ({ ...q, text: q.text.trim() })).filter(q => q.text),
+      worlds: ed.worlds,
+      priorKnowledgeCompleted: bool(b.priorKnowledgeCompleted),
+      priorKnowledgeDocumentUrl: b.priorKnowledgeDocumentUrl || "",
+      priorKnowledgeDocumentShared: bool(b.priorKnowledgeDocumentShared),
+      sourcesCompleted: bool(b.sourcesCompleted),
+      sources: b.sources || [],
+      footprintSteps: b.footprintSteps || [],
+      reflectionCompleted: bool(b.reflectionCompleted)
+    };
+    let path, action;
+    if (ed.id) {
+      if (!ed.base) return edFail("De challenge is nog niet opgehaald.");
+      path = `/challenges/preparation/edit/${ed.id}`;
+      action = "update";
+      Object.assign(fields, {
+        challengeId: String(ed.id),
+        selectedEndProduct: b.selectedEndProduct || [],
+        collaborators: b.collaborators || [],
+        // Fases en voortgang ongewijzigd terugsturen
+        startPreparationDate: b.startPreparationDate || "",
+        preparationProgress: String(b.preparationProgress ?? 0),
+        startExecutionDate: b.startExecutionDate || "",
+        executionProgress: String(b.executionProgress ?? 0),
+        startEvaluationDate: b.startEvaluationDate || "",
+        evaluationProgress: String(b.evaluationProgress ?? 0),
+        endChallengeDate: b.endChallengeDate || ""
+      });
+    } else {
+      path = `/challenges/preparation/create/${S.uid}`;
+      action = "create";
+      Object.assign(fields, { ownerId: String(S.uid), collaborators: [] });
+    }
+    const isNew = !ed.id;
+    await edRun(() => postAction(action, fields, path), async () => {
+      await ensure("challenges", true);
+      if (S.data.checkin) ensure("checkin", true);
+      toast(isNew ? "Challenge aangemaakt" : "Challenge opgeslagen");
+    });
   }
 
   function errorCard(msg) {
@@ -1481,11 +1707,11 @@
         <div><h3>${esc(r.label)}</h3>
           <div class="sub">${icon("lock", 12)} Versleuteld · ${Math.max(1, people.size)} ${people.size > 1 ? "personen" : "persoon"}${status && status !== "verbonden" ? ` · ${esc(status)}` : ""}</div></div>
         <div class="actions">
-          <button class="btn sm" data-act="copyInvite" data-id="${r.id}" title="Uitnodiging kopiëren">${icon("users", 14)}Uitnodigen</button>
+          <button class="btn sm" data-act="copyInvite" data-id="${r.id}" title="Code kopiëren">${icon("users", 14)}Code</button>
           <button class="btn ghost icon" data-act="chatInfo" title="Groepsinstellingen">${icon("sliders", 16)}</button>
         </div>
       </div>
-      <div class="msgs">${items || `<div class="empty" style="margin:auto"><div class="big">${icon("chat", 24)}</div>Nog geen berichten. Zeg hallo!<button class="btn sm" data-act="copyInvite" data-id="${r.id}">${icon("users", 14)}Klasgenoten uitnodigen</button></div>`}
+      <div class="msgs">${items || `<div class="empty" style="margin:auto"><div class="big">${icon("chat", 24)}</div>Nog geen berichten. Zeg hallo!<button class="btn sm" data-act="copyInvite" data-id="${r.id}">${icon("copy", 14)}Code kopiëren voor klasgenoten</button></div>`}
         ${rejected ? `<div class="day-sep">${rejected} bericht${rejected === 1 ? " kon" : "en konden"} niet worden geopend</div>` : ""}
       </div>
       <div class="composer">
@@ -1494,18 +1720,16 @@
       </div>`;
   }
 
-  // Een uitnodiging is gewone tekst met de naam en de code, zodat je hem
-  // overal kunt plakken. Bij meedoen halen we de code er weer uit.
-  function inviteText(r) {
-    return `Je bent uitgenodigd voor de chatgroep "${r.label}" in MyLearnQ+.\nKlik in de chat op Meedoen en plak dit bericht.\nCode: ${LQChat.prettyCode(r.code)}`;
-  }
-
+  // Je deelt alleen de code, zodat je hem ook gewoon hardop kunt zeggen.
+  // Een oude uitnodiging (met tekst en een code van 20 tekens) werkt nog steeds.
   function parseInvite(text) {
     const s = String(text || "");
     const after = s.split(/code\s*:/i)[1] ?? s;
     const m = after.match(/(?:[A-Za-z2-7]{4}[\s-]*){4}[A-Za-z2-7]{4}/);
-    return { code: m ? m[0] : "", label: s.match(/groep\s+"([^"]{1,40})"/i)?.[1] };
+    return { code: m ? m[0] : after, label: s.match(/groep\s+"([^"]{1,40})"/i)?.[1] };
   }
+
+  const codeBox = r => `<div class="room-code" aria-label="Groepscode">${esc(LQChat.prettyCode(r.code))}</div>`;
 
   function chatDrawer(dr) {
     if (dr.type === "chatNew") {
@@ -1518,17 +1742,17 @@
       if (!r) return "";
       return drawer("Groep gemaakt", `
         <div class="done-mark">${icon("check", 26)}</div>
-        <p style="margin:0 0 12px;text-align:center">Stuur deze uitnodiging naar de mensen die mee mogen praten, bijvoorbeeld via WhatsApp of Teams.</p>
-        <pre class="invite">${esc(inviteText(r))}</pre>
-        <div class="btns" style="margin-top:14px"><button class="btn" style="flex:1" data-act="closeDrawer">Naar de groep</button><button class="btn primary" style="flex:1" data-act="copyInvite" data-id="${r.id}">${icon("copy", 14)}Uitnodiging kopiëren</button></div>
-        <p class="note" style="margin-top:18px">Iedereen met deze uitnodiging kan meelezen. Deel hem dus alleen met mensen die je vertrouwt.</p>`);
+        <p style="margin:0 0 12px;text-align:center">Geef deze code aan de mensen die mee mogen praten. Zij klikken in de chat op Meedoen en vullen hem in.</p>
+        ${codeBox(r)}
+        <div class="btns" style="margin-top:14px"><button class="btn" style="flex:1" data-act="closeDrawer">Naar de groep</button><button class="btn primary" style="flex:1" data-act="copyInvite" data-id="${r.id}">${icon("copy", 14)}Code kopiëren</button></div>
+        <p class="note" style="margin-top:18px">Iedereen met deze code kan meelezen. Geef hem dus alleen aan mensen die je vertrouwt.</p>`);
     }
     if (dr.type === "chatJoin") {
       return drawer("Meedoen met een groep", `
         ${dr.error ? `<p class="err">${esc(dr.error)}</p>` : ""}
-        <div class="field"><label for="join-code">Plak hier de uitnodiging die je hebt gekregen</label>
-          <textarea id="join-code" rows="4" autocomplete="off" spellcheck="false" placeholder="Je bent uitgenodigd voor de chatgroep ...&#10;Code: XXXX XXXX XXXX XXXX XXXX"></textarea>
-          <small>Alleen de code van 20 tekens werkt ook.</small></div>
+        <div class="field"><label for="join-code">Vul de code in die je hebt gekregen</label>
+          <input id="join-code" class="code-input" maxlength="80" autocomplete="off" spellcheck="false" placeholder="ABCDEF">
+          <small>De code bestaat uit 6 letters.</small></div>
         <button class="btn primary" data-act="chatDoJoin">Meedoen</button>`);
     }
     if (dr.type === "chatInfo") {
@@ -1541,9 +1765,9 @@
           <div style="display:flex;gap:8px"><div class="field" style="flex:1;margin:0"><input id="rename" value="${esc(r.label)}" maxlength="40"></div><button class="btn" data-act="chatRename" data-id="${r.id}">Opslaan</button></div>
           <small class="muted" style="font-size:12px">Alleen jij ziet deze naam.</small>
         </div>
-        <div class="set"><h3>Uitnodigen</h3>
-          <pre class="invite">${esc(inviteText(r))}</pre>
-          <button class="btn sm" data-act="copyInvite" data-id="${r.id}" style="align-self:flex-start">${icon("copy", 13)}Uitnodiging kopiëren</button>
+        <div class="set"><h3>Code van de groep</h3>
+          ${codeBox(r)}
+          <button class="btn sm" data-act="copyInvite" data-id="${r.id}" style="align-self:flex-start">${icon("copy", 13)}Code kopiëren</button>
         </div>
         <div class="set"><h3>Wie praten er mee</h3>
           <div class="kv">${Object.values(senders).map(n => `<div class="row"><span>${esc(n)}</span></div>`).join("") || `<div class="row"><span class="muted">Nog niemand heeft iets gestuurd</span></div>`}</div>
@@ -1609,8 +1833,8 @@
       if (act === "copyInvite") {
         const r = LQChat.rooms.find(x => x.id === el.dataset.id);
         if (!r) return;
-        await navigator.clipboard.writeText(inviteText(r));
-        toast("Uitnodiging gekopieerd. Plak hem in een berichtje aan je klasgenoten.");
+        await navigator.clipboard.writeText(LQChat.normalizeCode(r.code));
+        toast("Code gekopieerd");
       }
     } catch (e) {
       toast(e.message || "Er ging iets mis");
@@ -1660,6 +1884,8 @@
     if (!dr) return "";
     if (dr.type === "ci") return checkinDetail(dr.date);
     if (dr.type === "ciForm") return ciFormDrawer();
+    if (dr.type === "chEdit") return chEditDrawer();
+    if (dr.type === "sessRefl") return reflectionDrawer();
     if (dr.type === "settings") return settingsDrawer();
     if (dr.type.startsWith("chat")) return chatDrawer(dr);
     if (dr.type === "panel") {
@@ -1841,7 +2067,7 @@
   }
 
   app.addEventListener("click", e => {
-    const el = e.target.closest("[data-nav],[data-act],[data-panel],[data-ch],[data-ci],[data-chf],[data-set],[data-wmove],[data-room],[data-ciform],[data-cikind],[data-cich],[data-cidur],[data-ciblock],[data-cidel],[data-ciitem],[data-look],[data-settab],[data-sessf]");
+    const el = e.target.closest("[data-nav],[data-act],[data-panel],[data-ch],[data-ci],[data-chf],[data-set],[data-wmove],[data-room],[data-ciform],[data-cikind],[data-cich],[data-cidur],[data-ciblock],[data-cidel],[data-ciitem],[data-look],[data-settab],[data-sessf],[data-edw],[data-edp]");
     if (!el || !app.contains(el)) return;
     const ds = el.dataset;
 
@@ -1857,6 +2083,12 @@
     if (ds.ci) { S.ui.drawer = { type: "ci", date: ds.ci }; return render(); }
     if (ds.chf) { S.ui.chFilter = ds.chf; return render(); }
     if (ds.sessf) { S.ui.sessFilter = ds.sessf; return render(); }
+    if (ds.edw || ds.edp) {
+      const ed = S.ui.ed, key = ds.edw ? "worlds" : "perspectives", id = Number(ds.edw || ds.edp);
+      ed[key] = ed[key].includes(id) ? ed[key].filter(x => x !== id) : [...ed[key], id];
+      ed.dirty = true;
+      return bumpEd();
+    }
     if (ds.room) { S.ui.room = ds.room; LQChat.markRead(ds.room); return render(); }
     if (ds.act && ds.act.startsWith("chat") || ds.act === "copyInvite") return chatAction(ds.act, el);
     if (ds.set) return save({ [ds.set]: ds.val });
@@ -1875,11 +2107,13 @@
       case "closeChat": S.ui.classicChat = false; return render();
       case "closeDrawer": {
         const wasPanel = S.ui.drawer?.type === "panel";
-        if (S.ui.drawer?.type === "ciForm") {
-          if (S.ui.form?.saving) return;
-          if (S.ui.form?.dirty && !confirm("Je wijzigingen zijn nog niet opgeslagen. Toch sluiten?")) return;
-          S.ui.form = null;
+        const f = openForm();
+        if (f) {
+          if (f.saving) return;
+          if (f.dirty && !confirm("Je wijzigingen zijn nog niet opgeslagen. Toch sluiten?")) return;
         }
+        S.ui.form = null;
+        S.ui.ed = null;
         S.ui.drawer = null;
         if (wasPanel) { refreshAll(); toast("Gegevens bijgewerkt"); } else render();
         return;
@@ -1919,6 +2153,23 @@
       case "ciAddItem": if (addTask()) bumpForm(); return;
       case "ciSave": return saveCiForm(false);
       case "ciDraft": return saveCiForm(true);
+      case "chNew": return openChEdit(null);
+      case "chEdit": return openChEdit(Number(ds.id));
+      case "edSave": return saveChallenge();
+      case "edSqAdd":
+        S.ui.ed.subQuestions.push(newSubQ());
+        S.ui.ed.dirty = true;
+        bumpEd();
+        overlayEl.querySelector(".subq-row:last-child input")?.focus();
+        return;
+      case "edSqDel":
+        S.ui.ed.subQuestions.splice(Number(ds.i), 1);
+        S.ui.ed.dirty = true;
+        return bumpEd();
+      case "sessRegister": return sessionAction("register", Number(ds.id));
+      case "sessUnregister": return sessionAction("unregister", Number(ds.id));
+      case "sessReflect": return openReflection(Number(ds.id));
+      case "sessReflSave": return saveReflection();
     }
   });
 
@@ -1971,6 +2222,10 @@
       if (tot) tot.textContent = checkoutTotal(f);
       f.dirty = true;
     }
+    const ed = S.ui.ed;
+    if (ed && t.dataset.ed) { ed[t.dataset.ed] = t.value; ed.dirty = true; }
+    if (ed && t.dataset.edsq) { ed.subQuestions[Number(t.dataset.edsq)].text = t.value; ed.dirty = true; }
+    if (ed && t.dataset.refl) { ed.answers[t.dataset.refl] = t.value; ed.dirty = true; }
     if (t.id === "chq") {
       S.ui.chQuery = t.value;
       const pos = t.selectionStart;
@@ -1983,9 +2238,10 @@
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && S.ui.drawer) {
-      if (S.ui.drawer.type === "ciForm" && S.ui.form?.dirty) return;
+      if (openForm()?.dirty) return;
       S.ui.drawer = null;
       S.ui.form = null;
+      S.ui.ed = null;
       render();
     } else if (e.key === "Escape" && S.panelOnly && S.ui.classicChat) {
       S.ui.classicChat = false;

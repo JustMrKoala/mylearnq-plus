@@ -18,11 +18,11 @@ Een onofficiële browserextensie die [MyLearnQ](https://app.mylearnq.com) een ni
 ## Functies van de extensie
 
 - **Nieuwe interface** voor Overzicht, Check-in, Challenges, Ideeën en Groei in beeld, gebouwd op de gegevens die de site zelf ook laadt.
-- **Check-in en check-out direct invullen:** taken plannen, je check-in invullen en in een eigen tabblad een check-out doen kan helemaal in de nieuwe interface. Heeft je school maar drie werkblokken, zet dan het 4e blok uit onder Instellingen. De extensie gebruikt daarvoor dezelfde opslagacties als het formulier van MyLearnQ zelf. Challenges, ideeën en reflecties bewerk je in het originele formulier, geopend in een zijpaneel.
+- **Check-in en check-out direct invullen:** taken plannen, je check-in invullen en in een eigen tabblad een check-out doen kan helemaal in de nieuwe interface. Heeft je school maar drie werkblokken, zet dan het 4e blok uit onder Instellingen. De extensie gebruikt daarvoor dezelfde opslagacties als het formulier van MyLearnQ zelf. Challenges bewerk en maak je ook direct in de nieuwe interface. Ideeën en de groeireflectie open je nog in het originele formulier, in een zijpaneel.
 - **Helemaal aanpasbaar:** kies een van de kant-en-klare looks of stel alles zelf in onder Instellingen: kleuren en verlopen, achtergronden (ook je eigen foto), kaartstijl, lettertype, iconen, zijbalk links of rechts, breedte en dashboardblokken. Je look kun je delen met een code, en wie verder wil kan eigen CSS schrijven.
-- **Inspiratiesessies** op een eigen pagina, op het overzicht en in je check-inweek. Gebruikt je school ze niet, dan verberg je ze met één schakelaar.
+- **Inspiratiesessies** op een eigen pagina, op het overzicht en in je check-inweek. Aanmelden, afmelden en je reflectie invullen doe je met knoppen op de sessiekaart. Gebruikt je school ze niet, dan verberg je ze met één schakelaar.
 - **Klassieke weergave:** liever de originele site? Die krijg je met een tandwiel en een chatknop rechtsboven in de kop, en bijna dezelfde opties: looks, verlopen, achtergronden, kaartstijlen, breedte en eigen CSS.
-- **Versleutelde chat** in groepen: maak een groep, kopieer de uitnodiging en stuur hem naar je klasgenoten (zie hieronder).
+- **Versleutelde chat** in groepen: maak een groep en geef de code van 6 letters aan je klasgenoten. Dat kan ook gewoon hardop (zie hieronder).
 
 ## Installeren
 
@@ -43,14 +43,15 @@ Binnenkort in de Microsoft Edge Add-ons store.
 Berichten gaan via de openbare relay [ntfy.sh](https://ntfy.sh). Ze worden in je browser versleuteld voordat ze worden verstuurd.
 
 1. **Handtekening:** elk bericht wordt ondertekend met een ECDSA P-256 sleutel die alleen op jouw apparaat staat. Ontvangers controleren de handtekening en zien een sleutelvingerafdruk. Gebruikt iemand dezelfde naam met een andere sleutel, dan krijg je een waarschuwing.
-2. **Groepslaag:** AES-256-GCM met een sleutel die met PBKDF2 (SHA-256, 250.000 rondes) wordt afgeleid van de geheime groepscode van 20 tekens (100 bits). Die code zit in de uitnodiging.
+2. **Groepslaag:** AES-256-GCM met een sleutel die met PBKDF2 (SHA-256, 250.000 rondes) wordt afgeleid van de geheime groepscode van 6 letters. De naam van het kanaal op de relay wordt op dezelfde trage manier afgeleid. Oudere groepen met een code van 20 tekens blijven werken.
 3. **Applaag:** nog een laag AES-256-GCM met een vaste appsleutel, zodat de relay geen herkenbare structuur ziet.
 
 Elke laag gebruikt een eigen willekeurige IV en bindt context via additional data. Berichten hebben een uniek ID en een tijdstempel, zodat herhaalde of verplaatste berichten worden geweigerd.
 
 **Eerlijk over de grenzen:**
 
-- De appsleutel staat in de broncode en is voor iedereen gelijk. De echte bescherming is de groepscode in de uitnodiging: deel die alleen met mensen die je vertrouwt.
+- De appsleutel staat in de broncode en is voor iedereen gelijk. De echte bescherming is de groepscode: deel die alleen met mensen die je vertrouwt.
+- Een code van 6 letters heeft ongeveer 190 miljoen mogelijkheden. Door de trage sleutelafleiding is raden duur, maar iemand met veel rekenkracht die de kanaalnaam kent, kan de code in principe terugvinden. Voor echt geheime gesprekken is deze chat niet bedoeld.
 - ntfy.sh bewaart berichten maximaal 12 uur. Je eigen geschiedenis blijft versleuteld op je computer staan.
 - De relay ziet wel wanneer er berichten zijn en vanaf welk IP-adres ze komen.
 - Dit is een schoolproject en is niet door een expert gecontroleerd. Gebruik het niet voor echt gevoelige informatie.

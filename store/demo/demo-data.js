@@ -102,13 +102,46 @@
         { sessionId: 2, title: "Bijen houden", description: "Een imker vertelt over het leven in een bijenkast. Je mag zelf honing proeven.", imageUrl: null, sessionDate: wk(8), sessionTime: "13:30:00", organizers: [{ name: "Imkersvereniging" }], maxParticipants: 20, bringItems: "", registrationCount: 6, isRegistered: false, canRegister: true, canUnregister: false, isPast: false, canReflect: false, reflectionAnswers: null },
         { sessionId: 3, title: "Stop-motion film", description: "Maak in twee uur je eigen korte film met klei en een telefoon.", imageUrl: null, sessionDate: wk(-6), sessionTime: "10:00:00", organizers: [{ name: "Meneer Bakker" }], maxParticipants: 12, bringItems: "Telefoon", registrationCount: 12, isRegistered: true, canRegister: false, canUnregister: false, isPast: true, canReflect: true, reflectionAnswers: null }
       ],
-      reflectionQuestions: []
+      reflectionQuestions: [
+        { id: 1, key: "learned", label: "Wat heb je geleerd?", isRequired: true },
+        { id: 2, key: "next", label: "Wat ga je hiermee doen?", isRequired: false }
+      ]
     }
   };
 
-  window.fetch = async url => {
+  // Opslaan in de demo: de formulieracties passen alleen de nagebootste gegevens aan
+  const actions = {
+    register: f => { const x = routes["/sessions/1"].sessions.find(s => s.sessionId === Number(f.get("sessionId"))); Object.assign(x, { isRegistered: true, canRegister: false, canUnregister: true, registrationCount: x.registrationCount + 1 }); },
+    unregister: f => { const x = routes["/sessions/1"].sessions.find(s => s.sessionId === Number(f.get("sessionId"))); Object.assign(x, { isRegistered: false, canRegister: true, canUnregister: false, registrationCount: x.registrationCount - 1 }); },
+    saveReflection: f => { const x = routes["/sessions/1"].sessions.find(s => s.sessionId === Number(f.get("sessionId"))); x.reflectionAnswers = JSON.parse(f.get("answers")); },
+    update: f => {
+      const c = challenges.find(x => x.challengeId === Number(f.get("challengeId")));
+      for (const k of ["title", "pitch", "learningQuestion"]) c[k] = f.get(k);
+      for (const k of ["subQuestions", "worlds", "perspectives"]) c[k] = JSON.parse(f.get(k));
+    },
+    create: f => {
+      const id = Math.max(...challenges.map(x => x.challengeId)) + 1;
+      const c = ch(id, f.get("title"), f.get("learningQuestion"), iso(day(0)), "", "", "", 0, JSON.parse(f.get("worlds")));
+      Object.assign(c, { pitch: f.get("pitch"), subQuestions: JSON.parse(f.get("subQuestions")), perspectives: JSON.parse(f.get("perspectives")) });
+      challenges.push(c);
+    }
+  };
+
+  window.fetch = async (url, opt) => {
+    const u = new URL(url, location.href);
+    const act = u.search.match(/^\?\/(\w+)/);
+    if (act) {
+      window.__posts = [...(window.__posts || []), { path: u.pathname, action: act[1], fields: Object.fromEntries(opt.body) }];
+      actions[act[1]]?.(opt.body);
+      return new Response(JSON.stringify({ type: "success", status: 200, data: "[{}]" }));
+    }
+    const edit = u.pathname.match(/\/challenges\/preparation\/edit\/(\d+)\/__data\.json$/);
+    if (edit) {
+      const c = challenges.find(x => x.challengeId === Number(edit[1]));
+      return new Response(JSON.stringify({ type: "data", nodes: [{ type: "data", data: enc({ dbUser: user }) }, { type: "data", data: enc({ challenge: { ...c, sources: [{ id: "s1", title: "Boek over moestuinen" }], footprintSteps: [], selectedEndProduct: ["poster"] } }) }] }));
+    }
     // Bij file:// staat de stationsletter in het pad (/C:/student/...), dus zoek op het einde
-    const path = new URL(url, location.href).pathname;
+    const path = u.pathname;
     const key = Object.keys(routes).find(r => path.endsWith(r + "/__data.json"));
     const data = routes[key];
     if (!data) return new Response("{}", { status: 404 });
@@ -129,7 +162,7 @@
 
   // Nagebootste chat met een paar berichten
   const now = Date.now();
-  const room = { id: "demo", code: "K7QM2XPAH4TC9WJRB6NE", label: "Project Podcast" };
+  const room = { id: "demo", code: "KTRMWB", label: "Project Podcast" };
   const msgs = [
     { id: "a", ts: now - 3600e3 * 2, name: "Lotte V.", fp: "4F2A 9C1D 77B0 E3A5", text: "Zullen we morgen het tweede interview opnemen?", mine: false },
     { id: "b", ts: now - 3600e3 * 2 + 9e4, name: "Noor J.", fp: "B28F FFD7 0C31 A9E2", text: "Goed idee! Ik neem de microfoon van school mee.", mine: true },
@@ -140,7 +173,7 @@
   window.LQChat = {
     init: async () => {}, joinRoom: async () => "demo", createRoom: async () => ({ id: "demo", code: room.code }),
     leaveRoom: async () => {}, renameRoom: async () => {}, send: async () => {}, markRead: async () => {},
-    unread: () => 0, prettyCode: c => c.match(/.{1,4}/g).join(" "),
+    unread: () => 0, prettyCode: c => c, normalizeCode: c => c,
     rooms: [room, { id: "x", code: "", label: "Moestuin team" }, { id: "y", code: "", label: "Klas 2B" }],
     messages: id => id === "demo" ? msgs : id === "x" ? [{ id: "z", ts: now - 864e5, name: "Daan B.", fp: "", text: "Zaterdag zaaien?", mine: false }] : [],
     rejected: () => [], status: () => "verbonden", me: { fp: "B28F FFD7 0C31 A9E2" }, MAX_TEXT: 1500
